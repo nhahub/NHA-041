@@ -1,18 +1,18 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using test.Data;
 using test.Interfaces;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
 
 namespace test.Repository
 {
     public class AnimalRepository:IAnimal
     {
-        private readonly UserManager<IdentityUser> _usermanager;
+        private readonly UserManager<ApplicationUser> _usermanager;
         private readonly DepiContext _context;
 
-        public AnimalRepository(DepiContext context,UserManager<IdentityUser> usermanager) { 
+        public AnimalRepository(DepiContext context,UserManager<ApplicationUser> usermanager) { 
             _usermanager = usermanager;
         
         _context= context;
@@ -24,49 +24,73 @@ namespace test.Repository
             return savechanges();
         }
 
-        public Animalviewmodel AnimalDisplay(string? filter, string userid,bool mine)
+        public Animalviewmodel AnimalDisplay(string? typeFilter, string? locationFilter, string? genderFilter, string userid,bool mine)
         {
-            IQueryable<Animal> animals;
-            Animalviewmodel animviewmodel;
+            // Base query: no tracking for lighter read
+            IQueryable<Animal> animals = _context.Animals
+                .AsNoTracking()
+                .Include(a => a.User);
+
             if (mine)
             {
-                animals = _context.Animals
+                // For "My Animals" we need medical records to show the Record button
+                animals = animals
                     .Include(a => a.MedicalRecords)
                     .Where(anm => anm.Userid == userid);
-                
-                animviewmodel = new Animalviewmodel
-                {
-                    animals = animals.ToList(),
-                    filter = filter ?? "any",
-                    IsMine = true
-                };
-                return animviewmodel;
             }
             else
             {
-
-                if (filter == null || filter == "any")
-                {
-                    
-                    animals = _context.Animals
-                        .Include(a => a.MedicalRecords)
-                        .Include(a => a.User)
-                        .Where(a => a.Userid != userid && !_context.Requests.Any(r => r.Userid == userid && r.AnimalId == a.AnimalId));
-                }
-                else
-                {
-                    animals = _context.Animals
-                        .Include(a => a.MedicalRecords)
-                        .Include(a => a.User)
-                        .Where(anm => anm.Userid != userid && anm.Type == filter && !_context.Requests.Any(r => r.Userid == userid && r.AnimalId == anm.AnimalId));
-                }
-                animviewmodel = new Animalviewmodel
-                {
-                    animals = animals.ToList(),
-                    filter = filter ?? "any",
-                    IsMine = false
-                };
+                animals = animals.Where(a =>
+                    a.Userid != userid &&
+                    !a.IsAdopted &&
+                    !_context.Requests.Any(r => r.Userid == userid && r.AnimalId == a.AnimalId));
             }
+
+            // Apply filters for both browsing and "My" view
+            var normalizedType = string.IsNullOrWhiteSpace(typeFilter) ? "any" : typeFilter.ToLower();
+            var normalizedGender = string.IsNullOrWhiteSpace(genderFilter) ? "any" : genderFilter.ToLower();
+            var normalizedLocation = string.IsNullOrWhiteSpace(locationFilter) ? "any" : locationFilter;
+
+            if (normalizedType != "any")
+            {
+                animals = animals.Where(a => a.Type != null && a.Type.ToLower() == normalizedType);
+            }
+
+            if (normalizedGender != "any")
+            {
+                animals = animals.Where(a => a.Gender != null && a.Gender.ToLower() == normalizedGender);
+            }
+
+            if (normalizedLocation != "any")
+            {
+                animals = animals.Where(a => a.User != null && a.User.location == normalizedLocation);
+            }
+
+            // Build filter option lists
+            var typeOptions = _context.Animals
+                .Where(a => a.Type != null && a.Type != "")
+                .Select(a => a.Type)
+                .Distinct()
+                .OrderBy(t => t)
+                .ToList();
+
+            var locationOptions = _context.Users
+                .Where(u => !string.IsNullOrWhiteSpace(u.location))
+                .Select(u => u.location!)
+                .Distinct()
+                .OrderBy(l => l)
+                .ToList();
+
+            var animviewmodel = new Animalviewmodel
+            {
+                animals = animals.ToList(),
+                TypeFilter = normalizedType,
+                GenderFilter = normalizedGender,
+                LocationFilter = normalizedLocation == "any" ? null : normalizedLocation,
+                TypeOptions = typeOptions,
+                LocationOptions = locationOptions,
+                IsMine = mine
+            };
 
             return animviewmodel;
         }
@@ -80,6 +104,15 @@ namespace test.Repository
         {
             var animal = await _context.Animals.FirstOrDefaultAsync(a => a.AnimalId == id);
             return  animal;
+        }
+
+        public async Task<Animal?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _context.Animals
+                .Include(a => a.User)
+                .Include(a => a.MedicalRecords)
+                    .ThenInclude(m => m.VaccinationNeededs)
+                .FirstOrDefaultAsync(a => a.AnimalId == id);
         }
         public async Task<bool> DeleteAnimal(Animal animal)
         {
@@ -109,6 +142,19 @@ namespace test.Repository
         {
             return await _context.Animals
                 .FirstOrDefaultAsync(a => a.Name == name && a.Type == type && a.Age == age && a.Userid == userId);
+        }
+        public string GetAnimalOwnerId(int animalId)
+        {
+                var animalOwnerId = _context.Animals
+                .Where(a => a.AnimalId == animalId)
+                .Select(a => a.Userid)
+                .FirstOrDefault();
+            if (animalOwnerId != null)
+                {
+                    return animalOwnerId;
+                }
+
+            return null; // or throw an exception if preferred
         }
     }
 }

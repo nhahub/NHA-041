@@ -1,6 +1,7 @@
 @model List<test.Models.ChatMessage>
 @using Microsoft.AspNetCore.Identity
-@inject UserManager<IdentityUser> UserManager
+@using test.Models
+@inject UserManager<ApplicationUser> UserManager
 @{
     ViewData["Title"] = "Chat";
     var currentUserId = UserManager.GetUserId(User);
@@ -81,7 +82,7 @@
                                             @if (isMe)
                                             {
                                                 <span class="ms-1">
-                                                    @if (msg.read == 1)
+                                                    @if (msg.read == true)
                                                     {
                                                         <i class="fas fa-check-double text-primary msg-status"></i>
                                                     }

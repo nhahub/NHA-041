@@ -1,0 +1,286 @@
+@model test.ViewModels.MyOrdersPageViewModel
+@{
+    ViewData["Title"] = "My Orders";
+}
+
+<section class="my-orders-section">
+    <div class="my-orders-container">
+        <!-- Header -->
+        <div class="my-orders-header">
+            <h1 class="my-orders-title">My Orders</h1>
+            <p class="my-orders-subtitle">View and track your orders from partner shelters</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <span class="stat-label">Total Orders</span>
+                    <span class="stat-value">@Model.TotalOrders</span>
+                </div>
+                <div class="stat-icon stat-icon-total">
+                    <i class="fas fa-box"></i>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <span class="stat-label">Completed</span>
+                    <span class="stat-value">@Model.CompletedOrders</span>
+                </div>
+                <div class="stat-icon stat-icon-completed">
+                    <i class="fas fa-check-square"></i>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <span class="stat-label">Pending</span>
+                    <span class="stat-value">@Model.PendingOrders</span>
+                </div>
+                <div class="stat-icon stat-icon-pending">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-filter-card">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search orders by number or items..." />
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="fas fa-filter"></i> All Status
+                </button>
+                <button class="filter-btn" data-filter="completed">
+                    <i class="fas fa-check"></i> Completed
+                </button>
+                <button class="filter-btn" data-filter="pending">
+                    <i class="fas fa-clock"></i> Pending
+                </button>
+            </div>
+        </div>
+
+        <!-- Orders List -->
+        <div class="orders-list">
+            @if (Model.Orders.Count == 0)
+            {
+                <div class="empty-orders">
+                    <div class="empty-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <h3>No Orders Yet</h3>
+                    <p>You haven't placed any orders yet. Start shopping to see your orders here!</p>
+                    <a asp-controller="Shelter" asp-action="UserView" class="theme-cta">
+                        <i class="fas fa-store"></i> Browse Shelters
+                    </a>
+                </div>
+            }
+            else
+            {
+                @foreach (var order in Model.Orders)
+                {
+                    <div class="order-card" data-status="@(order.OrderPaid == true ? "completed" : "pending")" data-order-id="ORD-2024-@order.OrderId.ToString("D3")">
+                        <div class="order-main">
+                            <div class="order-icon">
+                                <i class="fas fa-box-open"></i>
+                            </div>
+                            <div class="order-info">
+                                <div class="order-header-row">
+                                    <span class="order-number">ORD-2024-@order.OrderId.ToString("D3")</span>
+                                    @if (order.OrderPaid == true)
+                                    {
+                                        <span class="status-badge status-success">
+                                            <i class="fas fa-check-square"></i> Success
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge status-pending">
+                                            <i class="fas fa-hourglass-half"></i> Pending
+                                        </span>
+                                    }
+                                </div>
+                                <div class="order-meta">
+                                    <span class="meta-item">
+                                        <i class="far fa-clock"></i> @order.OrderDate.ToString("MMM dd, yyyy, hh:mm tt")
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-shopping-basket"></i> @order.OrderDetails.Sum(od => od.Quantity) items
+                                    </span>
+                                    @if (order.OrderDetails.Any())
+                                    {
+                                        var firstItem = order.OrderDetails.FirstOrDefault();
+                                        <a asp-controller="Shelter" asp-action="Shelterpage" 
+                                           asp-route-Id="@firstItem?.ShelterUserId"
+                                           asp-route-Email="@firstItem?.ShelterEmail"
+                                           asp-route-PhoneNumber="@firstItem?.ShelterPhone"
+                                           asp-route-UserName="@firstItem?.ShelterName"
+                                           class="meta-item shelter-link">
+                                            <i class="fas fa-store"></i> @firstItem?.ShelterName
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                            <div class="order-actions">
+                                <button class="action-btn action-btn-primary toggle-details-btn" data-order="@order.OrderId">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                                <button class="expand-btn toggle-details-btn" data-order="@order.OrderId">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Expandable Details -->
+                        <div class="order-details-panel" id="details-@order.OrderId">
+                            <div class="details-grid">
+                                <!-- Order Items (grouped by ProductType) -->
+                                <div class="details-section">
+                                    <h4 class="section-title"><i class="fas fa-list"></i> Order Items</h4>
+                                    <div class="items-list">
+                                        @foreach (var item in order.GroupedOrderDetails)
+                                        {
+                                            var shelterInfo = order.OrderDetails.FirstOrDefault(od => od.ProductType == item.ProductType);
+                                            <div class="order-item">
+                                                <div class="item-image">
+                                                    @if (!string.IsNullOrEmpty(shelterInfo?.ProductPhoto))
+                                                    {
+                                                        <img src="@shelterInfo.ProductPhoto" alt="@item.ProductType" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-box"></i>
+                                                    }
+                                                </div>
+                                                <div class="item-info">
+                                                    <span class="item-name">@item.ProductType</span>
+                                                    <a asp-controller="Shelter" asp-action="Shelterpage" 
+                                                       asp-route-Id="@shelterInfo?.ShelterUserId"
+                                                       asp-route-Email="@shelterInfo?.ShelterEmail"
+                                                       asp-route-PhoneNumber="@shelterInfo?.ShelterPhone"
+                                                       asp-route-UserName="@shelterInfo?.ShelterName"
+                                                       class="item-seller shelter-link">Seller: @shelterInfo?.ShelterName</a>
+                                                </div>
+                                                <div class="item-quantity">
+                                                    <span>@item.Quantity</span>
+                                                </div>
+                                                <div class="item-price">
+                                                    <span>$@item.TotalPrice.ToString("F2")</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Payment & Summary -->
+                                <div class="details-section">
+                                    <h4 class="section-title"><i class="fas fa-credit-card"></i> Payment Details</h4>
+                                    <div class="payment-info">
+                                        @if (!string.IsNullOrEmpty(order.PaymentMethodType))
+                                        {
+                                            <div class="payment-method">
+                                                <div class="payment-icon">
+                                                    @if (order.PaymentMethodType?.ToLower() == "visa")
+                                                    {
+                                                        <i class="fab fa-cc-visa"></i>
+                                                    }
+                                                    else if (order.PaymentMethodType?.ToLower() == "mastercard")
+                                                    {
+                                                        <i class="fab fa-cc-mastercard"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-credit-card"></i>
+                                                    }
+                                                </div>
+                                                <div class="payment-details">
+                                                    <span class="payment-type">@order.PaymentMethodType</span>
+                                                    <span class="payment-number">**** **** **** @order.PaymentLast4Digits</span>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="payment-method">
+                                                <div class="payment-icon">
+                                                    <i class="fas fa-clock"></i>
+                                                </div>
+                                                <div class="payment-details">
+                                                    <span class="payment-type">Payment Pending</span>
+                                                    <span class="payment-number">Complete checkout to pay</span>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <div class="order-summary">
+                                            <div class="summary-row">
+                                                <span>Subtotal</span>
+                                                <span>$@order.TotalPrice.ToString("F2")</span>
+                                            </div>
+                                            <div class="summary-row">
+                                                <span>Shipping</span>
+                                                <span class="text-success">Free</span>
+                                            </div>
+                                            <div class="summary-row total">
+                                                <span>Total</span>
+                                                <span>$@order.TotalPrice.ToString("F2")</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Toggle order details
+            $('.toggle-details-btn').click(function () {
+                var orderId = $(this).data('order');
+                var panel = $('#details-' + orderId);
+                var expandBtn = $(this).closest('.order-card').find('.expand-btn i');
+
+                panel.slideToggle(300);
+                expandBtn.toggleClass('fa-chevron-down fa-chevron-up');
+            });
+
+            // Filter orders
+            $('.filter-btn').click(function () {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+
+                var filter = $(this).data('filter');
+
+                if (filter === 'all') {
+                    $('.order-card').show();
+                } else {
+                    $('.order-card').hide();
+                    $('.order-card[data-status="' + filter + '"]').show();
+                }
+            });
+
+            // Search orders
+            $('#searchInput').on('keyup', function () {
+                var searchTerm = $(this).val().toLowerCase();
+
+                $('.order-card').each(function () {
+                    var orderId = $(this).data('order-id').toLowerCase();
+                    var orderText = $(this).text().toLowerCase();
+
+                    if (orderId.includes(searchTerm) || orderText.includes(searchTerm)) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+        });
+    </script>
+}

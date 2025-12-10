@@ -1,11 +1,10 @@
 @model test.Models.MedicalRecord
 @using Microsoft.AspNetCore.Identity
-@inject UserManager<IdentityUser> UserManager
+@using test.Models
 
 @{
     ViewData["Title"] = "Medical Record Details";
-    var currentUserId = UserManager.GetUserId(User);
-    var isOwner = Model.Animal != null && Model.Animal.Userid == currentUserId;
+    var isOwner = ViewBag.IsOwner as bool? ?? false;
 }
 
 <section class="theme-section">
@@ -25,26 +24,48 @@
                         <h3 class="card-title mb-0"><i class="fas fa-heartbeat me-2"></i>Health Status</h3>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row mb-3">
+                        <div class="row mb-3 align-items-center">
                             <div class="col-sm-4 fw-bold text-muted">Status</div>
-                            <div class="col-sm-8">
+                            <div class="col-sm-8 d-flex align-items-center gap-3">
                                 @if (Model.Status == "Healthy")
                                 {
-                                    <span class="badge bg-success rounded-pill px-3">Healthy</span>
+                                    <span class="badge bg-success rounded-pill px-3 py-2">
+                                        <i class="fas fa-heart me-1"></i> Healthy
+                                    </span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-danger rounded-pill px-3">@Model.Status</span>
+                                    <span class="badge bg-danger rounded-pill px-3 py-2">
+                                        <i class="fas fa-heart-broken me-1"></i> @Model.Status
+                                    </span>
+                                }
+                                
+                                @if (isOwner)
+                                {
+                                    <form asp-action="ToggleStatus" asp-route-animalId="@Model.Animalid" method="post" class="d-inline">
+                                        @if (Model.Status == "Healthy")
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                                                <i class="fas fa-exchange-alt me-1"></i> Mark Unhealthy
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill">
+                                                <i class="fas fa-exchange-alt me-1"></i> Mark Healthy
+                                            </button>
+                                        }
+                                    </form>
                                 }
                             </div>
                         </div>
                         
-                        @if (!string.IsNullOrEmpty(Model.Injurys))
+                        @if (!string.IsNullOrEmpty(Model.injurys))
                         {
                             <div class="row mb-3">
                                 <div class="col-sm-4 fw-bold text-muted">Injuries/Notes</div>
                                 <div class="col-sm-8">
-                                    <p class="mb-0">@Model.Injurys</p>
+                                    <p class="mb-0">@Model.injurys</p>
                                 </div>
                             </div>
                         }

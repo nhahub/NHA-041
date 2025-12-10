@@ -1,16 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
 
 namespace test.Interfaces
 {
     public interface IAccounts
     {
-        public  Task<IdentityUser> GetUserbyid(string id);
-        public List<IdentityUser> GetUsers();
+        public  Task<ApplicationUser> GetUserbyid(string id);
+        public List<ApplicationUser> GetUsers();
         public  Task<bool> adduser(registerviewmodel user);
         public bool removeuser(string id);
         public bool savechanges();
-         public Task<IdentityUser> SignIn(LoginViewModel user);
+         public Task<ApplicationUser> SignIn(LoginViewModel user);
     }
 }

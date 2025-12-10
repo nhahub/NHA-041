@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -16,27 +16,30 @@ using System.Threading.Tasks;
 using test.Data;
 using test.Interfaces;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
 using test.Repository;
+using test.Services;
 
 namespace test.Controllers
 {
     public class AccountController : Controller
     {
         private readonly IAccounts _accountRepository;
-        private readonly UserManager<IdentityUser> userManager;
-        private readonly SignInManager<IdentityUser> signInManager;
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly SignInManager<ApplicationUser> signInManager;
         private readonly IEmailSender emailSender;
         private readonly DepiContext _context;
+        private readonly PhotoServices _photoServices;
 
 
-        public AccountController(IAccounts accountRepository, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender, DepiContext context)
+        public AccountController(IAccounts accountRepository, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IEmailSender emailSender, DepiContext context, PhotoServices photoServices)
         {
             _accountRepository = accountRepository;
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.emailSender = emailSender;
             _context = context;
+            _photoServices = photoServices;
         }
         public async Task<IActionResult> login(string ?ReturnUrl)
         {
@@ -73,7 +76,7 @@ namespace test.Controllers
             if (result.Succeeded && User.IsInRole("User"))
             {
                 // Set Session Variables
-                var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId == user1.Id && o.OrderStatus == 0);
+                var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId == user1.Id && o.OrderPaid == false);
                 if (orderExists != null)
                 {
                     var cartcount = _context.OrderDetails.Where(o => o.OrderId == orderExists.OrderId).Sum(o => o.Quantity);
@@ -85,7 +88,7 @@ namespace test.Controllers
                 }
 
                 var notificationCount = await _context.ChatMessages
-                    .Where(m => m.ReceiverId == user1.Id && m.read == 0)
+                    .Where(m => m.ReceiverId == user1.Id && m.read == false)
                     .Select(m => m.SenderId)
                     .Distinct()
                     .CountAsync();
@@ -97,7 +100,7 @@ namespace test.Controllers
             else if (result.Succeeded && User.IsInRole("Shelter"))
             {
                 var notificationCount = await _context.ChatMessages
-                    .Where(m => m.ReceiverId == user1.Id && m.read == 0)
+                    .Where(m => m.ReceiverId == user1.Id && m.read == false)
                     .Select(m => m.SenderId)
                     .Distinct()
                     .CountAsync();
@@ -136,7 +139,24 @@ namespace test.Controllers
             {
                 return View(user);
             }
-            var userr = new IdentityUser { UserName = user.username, Email = user.email };
+            
+            string? photoUrl = null;
+            if (user.Photo != null && user.Photo.Length > 0)
+            {
+                var uploadResult = await _photoServices.AddPhotoAsync(user.Photo);
+                if (uploadResult.Error == null)
+                {
+                    photoUrl = uploadResult.SecureUrl.ToString();
+                }
+            }
+            
+            var userr = new ApplicationUser { 
+                UserName = user.username, 
+                Email = user.email, 
+                PhotoUrl = photoUrl,
+                FullName = user.FullName,
+                location = user.Location
+            };
             var result = await userManager.CreateAsync(userr, user.password);
 
             if (result.Succeeded)
@@ -215,7 +235,7 @@ namespace test.Controllers
             if (result.Succeeded)
             {
                 var user1 = await userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-                var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId ==user1.Id  && o.OrderStatus == 0);
+                var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId ==user1.Id  && o.OrderPaid == false);
                 if (orderExists != null)
                 {
                     var cartcount = _context.OrderDetails.Where(o => o.OrderId == orderExists.OrderId).Sum(o => o.Quantity);
@@ -227,7 +247,7 @@ namespace test.Controllers
                 }
 
                 var notificationCount = await _context.ChatMessages
-                    .Where(m => m.ReceiverId == user1.Id && m.read == 0)
+                    .Where(m => m.ReceiverId == user1.Id && m.read == false)
                     .Select(m => m.SenderId)
                     .Distinct()
                     .CountAsync();
@@ -265,7 +285,7 @@ namespace test.Controllers
                         var addLoginResult = await userManager.AddLoginAsync(user, info);
                         if (addLoginResult.Succeeded)
                         {
-                            var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.OrderStatus == 0);
+                            var orderExists = await _context.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.OrderPaid == false);
                             if (orderExists != null)
                             {
                                 var cartcount = _context.OrderDetails.Where(o => o.OrderId == orderExists.OrderId).Sum(o => o.Quantity);
@@ -277,7 +297,7 @@ namespace test.Controllers
                             }
 
                             var notificationCount = await _context.ChatMessages
-                                .Where(m => m.ReceiverId == user.Id && m.read == 0)
+                                .Where(m => m.ReceiverId == user.Id && m.read == false)
                                 .Select(m => m.SenderId)
                                 .Distinct()
                                 .CountAsync();
@@ -315,7 +335,16 @@ namespace test.Controllers
                     return View("login", loginViewModel);
                 }
 
-                var user = new IdentityUser { UserName = model.Username, Email = model.Email, PhoneNumber = model.PhoneNumber };
+                var pictureUrl = info.Principal.FindFirstValue("urn:google:picture");
+                var fullName = info.Principal.FindFirstValue(ClaimTypes.Name);
+                var user = new ApplicationUser { 
+                    UserName = model.Username, 
+                    Email = model.Email, 
+                    PhoneNumber = model.PhoneNumber, 
+                    PhotoUrl = pictureUrl,
+                    FullName = fullName,
+                    location = model.Location 
+                };
                 var result = await userManager.CreateAsync(user);
                 if (result.Succeeded)
                 {
@@ -323,7 +352,7 @@ namespace test.Controllers
                     if (result.Succeeded)
                     {
                         await userManager.AddToRoleAsync(user, model.Role);
-                        
+
                         // Send email confirmation
                         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
                         var confirmationLink = Url.Action("ConfirmEmail", "Account", new { Userid = user.Id, token = token }, Request.Scheme);

@@ -1,4 +1,4 @@
-﻿
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,7 +22,6 @@ namespace test.Repository
         {
             return await _context.MedicalRecords
                 .Include(r => r.VaccinationNeededs)
-                .Include(r => r.Animal)
                 .FirstOrDefaultAsync(r => r.Animalid == animalId);
         }
 
@@ -39,7 +38,7 @@ namespace test.Repository
             return SaveChanges();
         }
 
-        public async Task<bool> UpdateAsync(MedicalRecord record)
+        public async Task<bool> Update(MedicalRecord record)
         {
             _context.MedicalRecords.Update(record);
             return SaveChanges();

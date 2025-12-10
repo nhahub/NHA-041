@@ -1,21 +1,22 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using test.Data;
 using test.Hubs;
+using test.Models;
 
 namespace test.Controllers
 {
     [Authorize]
     public class ChatController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly DepiContext _context;
         private readonly IHubContext<ChatHub> _hubContext;
 
-        public ChatController(UserManager<IdentityUser> userManager, DepiContext context, IHubContext<ChatHub> hubContext)
+        public ChatController(UserManager<ApplicationUser> userManager, DepiContext context, IHubContext<ChatHub> hubContext)
         {
             _userManager = userManager;
             _context = context;
@@ -60,19 +61,20 @@ namespace test.Controllers
                 .OrderBy(m => m.Time)
                 .ToListAsync();
 
-            // Mark unread messages from receiver as read
-            var unreadMessages = messages.Where(m => m.ReceiverId == currentUser.Id && m.read == 0).ToList();
-            if (unreadMessages.Any())
+            var unreadMessageIds = messages
+                .Where(m => m.ReceiverId == currentUser.Id && m.read == false)
+                .Select(m => m.id)
+                .ToList();
+            
+            if (unreadMessageIds.Any())
             {
-                foreach (var msg in unreadMessages)
-                {
-                    msg.read = 1;
-                }
-                await _context.SaveChangesAsync();
+                await _context.ChatMessages
+                    .Where(m => unreadMessageIds.Contains(m.id))
+                    .ExecuteUpdateAsync(s => s.SetProperty(m => m.read, true));
 
                 // Update Notification Count in Session
                 var notificationCount = await _context.ChatMessages
-                    .Where(m => m.ReceiverId == currentUser.Id && m.read == 0)
+                    .Where(m => m.ReceiverId == currentUser.Id && m.read == false)
                     .Select(m => m.SenderId)
                     .Distinct()
                     .CountAsync();
@@ -120,7 +122,7 @@ namespace test.Controllers
             if (currentUser == null) return Content("");
 
             var notificationCount = await _context.ChatMessages
-                .Where(m => m.ReceiverId == currentUser.Id && m.read == 0)
+                .Where(m => m.ReceiverId == currentUser.Id && m.read == false)
                 .Select(m => m.SenderId)
                 .Distinct()
                 .CountAsync();
@@ -137,7 +139,7 @@ namespace test.Controllers
             if (currentUser == null) return Json(new List<object>());
 
             var unreadSenders = await _context.ChatMessages
-                .Where(m => m.ReceiverId == currentUser.Id && m.read == 0)
+                .Where(m => m.ReceiverId == currentUser.Id && m.read == false)
                 .GroupBy(m => m.SenderId)
                 .Select(g => new { SenderId = g.Key, Count = g.Count() })
                 .ToListAsync();
@@ -168,9 +170,9 @@ namespace test.Controllers
             if (currentUser == null) return Unauthorized();
 
             var message = await _context.ChatMessages.FindAsync(messageId);
-            if (message != null && message.ReceiverId == currentUser.Id && message.read == 0)
+            if (message != null && message.ReceiverId == currentUser.Id && message.read == false)
             {
-                message.read = 1;
+                message.read = true;
                 await _context.SaveChangesAsync();
 
                 // Notify the sender that this message was read

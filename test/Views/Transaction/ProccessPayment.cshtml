@@ -1,4 +1,4 @@
-﻿@using test.ModelViews
+@using test.ViewModels
 @model ProccessPaymentViewModel
 @{
     ViewData["Title"] = "Complete Your Purchase";
@@ -7,7 +7,7 @@
 <div class="container py-5 payment-process-page">
     <div class="text-center mb-5">
         <h1 class="display-4 fw-bold text-primary">Checkout</h1>
-        <p class="lead text-muted">Secure your payment safely 🐾</p>
+        <p class="lead text-muted">Secure your payment safely ??</p>
     </div>
 
     @if (Model.orderDetails == null || !Model.orderDetails.Any())
@@ -58,13 +58,31 @@
                                                 <label class="d-flex align-items-center gap-3 flex-grow-1 cursor-pointer m-0">
                                                     <input class="form-check-input flex-shrink-0" type="radio" asp-for="selectedPaymentMethodid" value="@method.PaymentMethodId" required style="transform: scale(1.2);">
                                                     <span class="fs-4 text-secondary">
-                                                        @if (method.MethodType == "Visa")
+                                                        @switch (method.MethodType?.ToLower())
                                                         {
-                                                            <i class="fa-brands fa-cc-visa" style="color: #1A1F71;"></i>
-                                                        }
-                                                        else
-                                                        {
-                                                            <i class="fa-brands fa-cc-mastercard text-warning"></i>
+                                                            case "visa":
+                                                                <i class="fa-brands fa-cc-visa" style="color: #1A1F71;"></i>
+                                                                break;
+                                                            case "mastercard":
+                                                                <i class="fa-brands fa-cc-mastercard" style="color: #EB001B;"></i>
+                                                                break;
+                                                            case "americanexpress":
+                                                            case "amex":
+                                                                <i class="fa-brands fa-cc-amex" style="color: #006FCF;"></i>
+                                                                break;
+                                                            case "discover":
+                                                                <i class="fa-brands fa-cc-discover" style="color: #FF6000;"></i>
+                                                                break;
+                                                            case "jcb":
+                                                                <i class="fa-brands fa-cc-jcb" style="color: #0B4EA2;"></i>
+                                                                break;
+                                                            case "dinersclub":
+                                                            case "diners":
+                                                                <i class="fa-brands fa-cc-diners-club" style="color: #004A97;"></i>
+                                                                break;
+                                                            default:
+                                                                <i class="fa-solid fa-credit-card text-muted"></i>
+                                                                break;
                                                         }
                                                     </span>
                                                     <span class="fw-medium">
@@ -117,38 +135,18 @@
                     <div class="card-body p-4">
                         <h4 class="d-flex justify-content-between align-items-center mb-4 fw-bold">
                             <span class="text-primary">Order Summary</span>
-                            <span class="badge bg-primary rounded-pill">@Model.orderDetails.Sum(x => x.Quantity)</span>
+                            <span class="badge bg-primary rounded-pill">@Model.TotalQuantity</span>
                         </h4>
                         
                         <ul class="list-group list-group-flush mb-3 bg-transparent">
-                            @{
-                                var itemlist = new List<(string Name, int Quantity)>();
-                                // Logic preserved exactly as in original
-                                foreach (var item in Model.orderDetails) 
-                                {
-                                    var currentitem = itemlist.FirstOrDefault(i => i.Name == item.Product.Type);
-                                    if (currentitem == default) 
-                                    {
-                                        itemlist.Add((item.Product.Type, item.Quantity));
-                                    }
-                                    else
-                                    {
-                                        var currentitem2 = (currentitem.Name, currentitem.Quantity + item.Quantity);
-                                        itemlist.Remove(currentitem);
-                                        itemlist.Add(currentitem2);
-                                    } 
-                                }
-                                
-                                foreach(var entry in itemlist)
-                                {
-                                    <li class="list-group-item d-flex justify-content-between lh-sm bg-transparent px-0 py-3 border-bottom">
-                                        <div>
-                                            <h6 class="my-0">@entry.Name</h6>
-                                            <small class="text-muted">Quantity: @entry.Quantity</small>
-                                        </div>
-                                        @* Note: Original code didn't show individual prices, so we don't show them here either to strictly preserve logic/data shown *@
-                                    </li>
-                                }
+                            @foreach (var item in Model.GroupedItems)
+                            {
+                                <li class="list-group-item d-flex justify-content-between lh-sm bg-transparent px-0 py-3 border-bottom">
+                                    <div>
+                                        <h6 class="my-0">@item.ProductType</h6>
+                                        <small class="text-muted">Quantity: @item.Quantity</small>
+                                    </div>
+                                </li>
                             }
                         </ul>
 

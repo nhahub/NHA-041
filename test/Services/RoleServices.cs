@@ -1,6 +1,7 @@
-﻿namespace test.Services
+namespace test.Services
 {
     using Microsoft.AspNetCore.Identity;
+    using test.Models;
 
     public static class RoleServices
     {
@@ -27,13 +28,13 @@
 
         public static async Task SeedAdminUserAsync(IServiceProvider serviceProvider)
         {
-            var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var adminEmail = "admin@happypaws.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
             if (adminUser == null)
             {
-                adminUser = new IdentityUser
+                adminUser = new ApplicationUser
                 {
                     UserName = "Admin",
                     Email = adminEmail,

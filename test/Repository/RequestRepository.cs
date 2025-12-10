@@ -1,4 +1,4 @@
-﻿using Azure.Core;
+using Azure.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ServiceStack.Web;
@@ -12,10 +12,10 @@ namespace test.Repository
 {
     public class RequestRepository : IRequests
     {
-        private readonly UserManager<IdentityUser> _usermanager;
+        private readonly UserManager<ApplicationUser> _usermanager;
         private readonly DepiContext _context;
 
-        public RequestRepository(DepiContext context,UserManager<IdentityUser> _usermanager)
+        public RequestRepository(DepiContext context,UserManager<ApplicationUser> _usermanager)
         {
             this._usermanager = _usermanager;
             _context = context;
@@ -31,26 +31,38 @@ namespace test.Repository
             return animalsrequested;
         }
 
-        public List<IdentityUser> RequestGot(string userid, List<Models.Request> requests)
+        public List<ApplicationUser> RequestGot(string userid, List<Models.Request> requests)
         {
             var userrequestedids = requests.Select(r => r.Userid).Distinct().ToList();
             var usersrequested =_usermanager.Users
-                .Where(u => userrequestedids.Contains(u.Id))
+                .Where(u => userrequestedids.Contains(u.Id)).Select(u=>new ApplicationUser
+                {
+                    UserName=u.UserName,
+                    Email=u.Email,
+                    PhoneNumber=u.PhoneNumber,
+                    Id=u.Id
+                })
                 .ToList();
             return usersrequested;
         }
 
-        public List<IdentityUser> RequestSent(string userid, List<Models.Request> requests)
+        public List<ApplicationUser> RequestSent(string userid, List<Models.Request> requests)
         {
             var useridsrequestedto = requests.Select(r => r.Useridreq).Distinct().ToList();
             var usersrequestedto = _usermanager.Users
-                .Where(u => useridsrequestedto.Contains(u.Id))
+                .Where(u => useridsrequestedto.Contains(u.Id)).Select(u => new ApplicationUser
+                {
+                    UserName = u.UserName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    Id = u.Id
+                })
                 .ToList();
             return usersrequestedto;
         }
-        public async Task<List<Models.Request>> LoadRequests()
+        public async Task<List<Models.Request>> LoadRequests(string userid)
         {
-            return  await _context.Requests.ToListAsync();
+            return await _context.Requests.Where(o => o.Userid == userid || o.Useridreq == userid).ToListAsync();
 
         }
         public async Task<bool> addRequest(Models.Request request)
@@ -103,6 +115,16 @@ namespace test.Repository
         {
             var saved = _context.SaveChanges();
             return saved > 0 ? true : false;
+        }
+        public async Task<List<Models.Request>> LoadRequestsForAnimal(int id)
+        {
+            return await _context.Requests.Where(r => r.AnimalId == id).ToListAsync();
+        }
+
+        public async Task<bool> HasPendingRequestForAnimal(string userId, int animalId)
+        {
+            return await _context.Requests.AnyAsync(r => 
+                r.Userid == userId && r.AnimalId == animalId && r.Status == "pending");
         }
 
     }

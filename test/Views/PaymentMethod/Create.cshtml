@@ -1,7 +1,13 @@
-@model test.ModelViews.CreatePaymentMethodViewModel
+@model test.ViewModels.CreatePaymentMethodViewModel
 @{
     ViewData["Title"] = "Add Payment Method";
 }
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+    <p class="mt-3 fw-bold text-primary">Saving your card securely...</p>
+</div>
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -10,52 +16,29 @@
                 <div class="card-body p-4">
                     <h3 class="mb-4 fw-bold text-center text-primary">Add New Card</h3>
                     
-                    <form asp-action="Create" method="post" id="payment-method-form">
+                    <form asp-action="Create" method="post" id="add-card-form">
                         @Html.AntiForgeryToken()
                         
-                        <!-- Card Number -->
-                        <div class="mb-4 position-relative">
-                            <label asp-for="CardNumber" class="form-label fw-bold text-muted small text-uppercase">Card Number</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text bg-white border-end-0 text-muted" id="card-icon">
-                                    <i class="far fa-credit-card"></i>
-                                </span>
-                                <input asp-for="CardNumber" class="form-control border-start-0 ps-0" placeholder="0000 0000 0000 0000" maxlength="19" id="card-number-input" autocomplete="off" />
+                        @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div class="alert alert-danger">
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                {
+                                    <div>@error.ErrorMessage</div>
+                                }
                             </div>
-                            <span asp-validation-for="CardNumber" class="text-danger small"></span>
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <!-- Expiry Month -->
-                            <div class="col-6">
-                                <label asp-for="ExpiryMonth" class="form-label fw-bold text-muted small text-uppercase">Expiry Month</label>
-                                <select asp-for="ExpiryMonth" class="form-select form-select-lg">
-                                    <option value="" disabled selected>MM</option>
-                                    @for (int i = 1; i <= 12; i++)
-                                    {
-                                        <option value="@i">@i.ToString("00")</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="ExpiryMonth" class="text-danger small"></span>
-                            </div>
-
-                            <!-- Expiry Year -->
-                            <div class="col-6">
-                                <label asp-for="ExpiryYear" class="form-label fw-bold text-muted small text-uppercase">Expiry Year</label>
-                                <select asp-for="ExpiryYear" class="form-select form-select-lg">
-                                    <option value="" disabled selected>YYYY</option>
-                                    @for (int i = DateTime.Now.Year; i <= DateTime.Now.Year + 10; i++)
-                                    {
-                                        <option value="@i">@i</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="ExpiryYear" class="text-danger small"></span>
-                            </div>
-                        </div>
+                        }
+                        
+                        <!-- Braintree Drop-in Container -->
+                        <div id="dropin-container" class="mb-4"></div>
+                        
+                        <!-- Hidden field for nonce -->
+                        <input type="hidden" id="nonce" name="Nonce" />
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
-                                Save Card
+                            <button type="submit" id="submit-button" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm" disabled>
+                                <span id="button-text">Save Card</span>
+                                <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
                             </button>
                             <a asp-controller="Transaction" asp-action="ProccessPayment" class="btn btn-outline-secondary btn-lg rounded-pill fw-bold">
                                 Cancel
@@ -66,10 +49,62 @@
             </div>
             
             <div class="text-center mt-4 text-muted small">
-                <i class="fas fa-lock me-1"></i> Your card information is stored securely.
+                <i class="fas fa-lock me-1"></i> Your card information is stored securely with Braintree.
             </div>
         </div>
     </div>
 </div>
 
+<!-- Braintree Drop-in JS -->
+<script src="https://js.braintreegateway.com/web/dropin/1.33.7/js/dropin.min.js"></script>
 
+<script>
+    var clientToken = '@ViewBag.ClientToken';
+    var submitButton = document.getElementById('submit-button');
+    var form = document.getElementById('add-card-form');
+    var dropinInstance;
+
+    braintree.dropin.create({
+        authorization: clientToken,
+        container: '#dropin-container',
+        card: {
+            cardholderName: {
+                required: true
+            }
+        }
+    }, function (err, instance) {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        dropinInstance = instance;
+        submitButton.disabled = false;
+    });
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        
+        // Show loading overlay IMMEDIATELY when button is clicked
+        document.getElementById('loading-overlay').style.display = 'flex';
+        
+        submitButton.disabled = true;
+        document.getElementById('button-text').textContent = 'Processing...';
+        document.getElementById('spinner').classList.remove('d-none');
+
+        dropinInstance.requestPaymentMethod(function (err, payload) {
+            if (err) {
+                console.error(err);
+                // Hide overlay on error
+                document.getElementById('loading-overlay').style.display = 'none';
+                submitButton.disabled = false;
+                document.getElementById('button-text').textContent = 'Save Card';
+                document.getElementById('spinner').classList.add('d-none');
+                return;
+            }
+
+            // Set the nonce and submit
+            document.getElementById('nonce').value = payload.nonce;
+            form.submit();
+        });
+    });
+</script>

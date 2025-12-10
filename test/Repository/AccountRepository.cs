@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ using test.Data;
 using System.Security.Claims;
 using test.Models;
 using Microsoft.AspNetCore.Authentication;
-using test.ModelViews;
+using test.ViewModels;
 using test.Repository;
 using test.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -19,9 +19,9 @@ namespace test.Repository
     public class AccountRepository : IAccounts
     {
         private readonly DepiContext _context;
-        private readonly UserManager<IdentityUser> userManager;
-        private readonly SignInManager<IdentityUser> signInManager;
-        public AccountRepository(DepiContext context,UserManager<IdentityUser> userManager,SignInManager<IdentityUser> signInManager) {
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly SignInManager<ApplicationUser> signInManager;
+        public AccountRepository(DepiContext context,UserManager<ApplicationUser> userManager,SignInManager<ApplicationUser> signInManager) {
         
         _context = context;
             this.userManager = userManager;
@@ -33,14 +33,14 @@ namespace test.Repository
                 return savechanges();
         }
 
-        public async Task<IdentityUser> GetUserbyid(string id)
+        public async Task<ApplicationUser> GetUserbyid(string id)
         {
             
             return await userManager.Users.FirstOrDefaultAsync(u => u.Id == id);
 
         }
 
-        public List<IdentityUser> GetUsers()
+        public List<ApplicationUser> GetUsers()
         {
             throw new NotImplementedException();
         }
@@ -59,7 +59,7 @@ namespace test.Repository
             return saved > 0 ? true : false;
         }
 
-        public async Task<IdentityUser> SignIn(LoginViewModel user)
+        public async Task<ApplicationUser> SignIn(LoginViewModel user)
         {
             return await userManager.Users.FirstOrDefaultAsync(u=>u.Email==user.email&&u.Email==user.password);
             

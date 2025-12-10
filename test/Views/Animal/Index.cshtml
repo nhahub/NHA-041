@@ -1,26 +1,18 @@
-﻿@model test.ModelViews.Animalviewmodel
-@inject UserManager<IdentityUser> usermanager
+@model test.ViewModels.Animalviewmodel
+@using Microsoft.AspNetCore.Identity
+@using test.Models
+@inject UserManager<ApplicationUser> usermanager
+@inject SignInManager<ApplicationUser> signInManager
 @{
-
-
-
     var title = "Animal Adoption Center";
-
-
-
     var userId = ViewBag.Userid as string;
-    var filteroptions = new List<SelectListItem>
-    {
-        new SelectListItem { Value = "", Text = "All Types" },
-        new SelectListItem { Value = "dog", Text = "Dog" },
-        new SelectListItem { Value = "cat", Text = "Cat" },
-        new SelectListItem { Value = "Bird", Text = "Bird" },
-    };
-}
-@{
-
+    var isAuthenticated = signInManager.IsSignedIn(User);
+    var typeOptions = Model.TypeOptions?.ToList() ?? new List<string>();
+    var locationOptions = Model.LocationOptions?.ToList() ?? new List<string>();
+    var selectedType = string.IsNullOrWhiteSpace(Model.TypeFilter) ? "any" : Model.TypeFilter;
+    var selectedGender = string.IsNullOrWhiteSpace(Model.GenderFilter) ? "any" : Model.GenderFilter;
+    var selectedLocation = string.IsNullOrWhiteSpace(Model.LocationFilter) ? "any" : Model.LocationFilter;
     ViewData["Title"] = title;
-
 }
 
 
@@ -36,23 +28,137 @@
         <div class="container">
             <div class="animals-header">
                 <h1 class="animals-title">Meet Our Lovely Animals</h1>
-                <p class="animals-subtitle">Browse through our furry friends waiting for a forever home 🐾</p>
+                <p class="animals-subtitle">Browse through our furry friends waiting for a forever home ??</p>
                 <div class="header-actions d-flex flex-column align-items-center gap-3">
                     <!-- Tabs -->
                     <div class="btn-group shadow-sm rounded-pill" role="group" aria-label="View Toggle">
                         <a asp-action="Index" asp-route-mine="false" class="animal-tab @(Model.IsMine ? "" : "animal-tab-active") rounded-pill-start px-4">
                             <i class="fas fa-search me-2"></i>Browse Animals
                         </a>
-                        <a asp-action="Index" asp-route-mine="true" class="animal-tab @(Model.IsMine ? "animal-tab-active" : "") rounded-pill-end px-4">
-                            <i class="fas fa-user-tag me-2"></i>My Animals
-                        </a>
+                        @if (isAuthenticated)
+                        {
+                            <a asp-action="Index" asp-route-mine="true" class="animal-tab @(Model.IsMine ? "animal-tab-active" : "") rounded-pill-end px-4">
+                                <i class="fas fa-user-tag me-2"></i>My Animals
+                            </a>
+                        }
+                        else
+                        {
+                            var myAnimalsUrl = Url.Action("Index", "Animal", new { mine = true });
+                            <a href="javascript:void(0)" onclick="showLoginModal('@Html.Raw(myAnimalsUrl)')" class="animal-tab rounded-pill-end px-4">
+                                <i class="fas fa-user-tag me-2"></i>My Animals
+                            </a>
+                        }
                     </div>
 
-                    <a asp-controller="Animal" asp-action="Create" class="btn btn-primary add-animal-btn mt-2">
-                        <i class="fas fa-plus"></i>
-                        Add New Animal
-                    </a>
+                    @if (isAuthenticated)
+                    {
+                        <a asp-controller="Animal" asp-action="Create" class="btn btn-primary add-animal-btn mt-2">
+                            <i class="fas fa-plus"></i>
+                            Add New Animal
+                        </a>
+                    }
+                    else
+                    {
+                        var createUrl = Url.Action("Create", "Animal");
+                        <a href="javascript:void(0)" onclick="showLoginModal('@Html.Raw(createUrl)')" class="btn btn-primary add-animal-btn mt-2">
+                            <i class="fas fa-plus"></i>
+                            Add New Animal
+                        </a>
+                    }
                 </div>
+
+                <!-- Filters -->
+                <form asp-action="Index" method="get" class="w-100 mt-3">
+                    <input type="hidden" name="mine" value="@Model.IsMine.ToString().ToLower()" />
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Type</label>
+                            <select class="form-select" name="type">
+                                @if (selectedType == "any")
+                                {
+                                    <option value="any" selected>All types</option>
+                                }
+                                else
+                                {
+                                    <option value="any">All types</option>
+                                }
+                                @foreach (var type in typeOptions)
+                                {
+                                    var value = type?.ToLower();
+                                    var isSelected = selectedType == value;
+                                    if (isSelected)
+                                    {
+                                        <option value="@value" selected>@type</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@value">@type</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Location</label>
+                            <select class="form-select" name="location">
+                                @if (selectedLocation == "any")
+                                {
+                                    <option value="any" selected>All locations</option>
+                                }
+                                else
+                                {
+                                    <option value="any">All locations</option>
+                                }
+                                @foreach (var location in locationOptions)
+                                {
+                                    var isSelected = selectedLocation == location;
+                                    if (isSelected)
+                                    {
+                                        <option value="@location" selected>@location</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@location">@location</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Gender</label>
+                            <select class="form-select" name="gender">
+                                @if (selectedGender == "any")
+                                {
+                                    <option value="any" selected>Any gender</option>
+                                }
+                                else
+                                {
+                                    <option value="any">Any gender</option>
+                                }
+                                @if (selectedGender == "male")
+                                {
+                                    <option value="male" selected>Male</option>
+                                }
+                                else
+                                {
+                                    <option value="male">Male</option>
+                                }
+                                @if (selectedGender == "female")
+                                {
+                                    <option value="female" selected>Female</option>
+                                }
+                                else
+                                {
+                                    <option value="female">Female</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <a asp-action="Index" asp-route-mine="@Model.IsMine" class="small text-muted">Reset filters</a>
+                    </div>
+                </form>
             </div>
             
             <div class="animals-grid">
@@ -64,13 +170,19 @@
         {
 
                         <!-- Animal Card -->
-                        <div class="animal-card" data-animal-type="@animal.Type">
+                        <div class="animal-card" data-animal-type="@animal.Type" id="animal-card-@animal.AnimalId">
                             <div class="animal-image-container">
                                 <img src="@animal.Photo" alt="@animal.Name" class="animal-image">
                                 <div class="animal-type-badge">
                                     <i class="fas fa-paw"></i>
                                     @animal.Type
                                 </div>
+                                @if (animal.IsAdopted)
+                                {
+                                    <div class="adopted-badge" style="position: absolute; top: 10px; right: 10px; background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);">
+                                        <i class="fas fa-heart me-1"></i>Adopted
+                                    </div>
+                                }
                             </div>
                             <div class="animal-info">
                                 <h3 class="animal-name">@animal.Name</h3>
@@ -83,105 +195,167 @@
                                         <i class="fas fa-tag"></i>
                                         <span>@animal.Type</span>
                                     </div>
+                                    @if (!string.IsNullOrEmpty(animal.Gender))
+                                    {
+                                        <div class="animal-detail-item">
+                                            @if (animal.Gender == "Male")
+                                            {
+                                                <i class="fas fa-mars"></i>
+                                                <span>Male</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-venus"></i>
+                                                <span>Female</span>
+                                            }
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(animal.User?.location))
+                                    {
+                                        <div class="animal-detail-item">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            @if (animal.User.location.StartsWith("http"))
+                                            {
+                                                <a href="@animal.User.location" target="_blank" class="text-decoration-none">
+                                                    <span>View Location</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span>@animal.User.location</span>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                                 
                                 @if (!Model.IsMine)
                                 {
-                                   var isShelter = await usermanager.IsInRoleAsync(animal.User, "Shelter");
+                                   var isShelter = animal.User != null && await usermanager.IsInRoleAsync(animal.User, "Shelter");
                                    if (isShelter)
                                    {
-                                       <div class="shelter-info-card">
-                                           <div class="shelter-title">
-                                               <i class="fas fa-home"></i> Shelter Contact
-                                           </div>
-                                           <div class="shelter-detail">
-                                               <i class="fas fa-user"></i> 
-                                               <a asp-controller="Shelter" asp-action="Shelterpage" 
-                                                  asp-route-Id="@animal.User.Id"
-                                                  asp-route-UserName="@animal.User.UserName"
-                                                  asp-route-Email="@animal.User.Email"
-                                                  asp-route-PhoneNumber="@animal.User.PhoneNumber"
-                                                  class="text-decoration-none text-pink fw-bold">
-                                                   @animal.User.UserName
-                                               </a>
-                                           </div>
-                                           <div class="shelter-detail">
-                                               <i class="fas fa-phone"></i> <span>@(animal.User.PhoneNumber ?? "N/A")</span>
-                                           </div>
-                                           <div class="shelter-detail">
-                                               <i class="fas fa-envelope"></i> <span>@animal.User.Email</span>
-                                           </div>
-                                            <a asp-controller="Chat" asp-action="index" asp-route-receiverId="@animal.Userid" class="shelter-chat-btn">
-                                               <i class="fas fa-comments"></i> Chat with Shelter
+                                       <div class="shelter-quick-info">
+                                           <a asp-controller="Shelter" asp-action="Shelterpage" 
+                                              asp-route-Id="@animal.User.Id"
+                                              asp-route-UserName="@animal.User.UserName"
+                                              asp-route-Email="@animal.User.Email"
+                                              asp-route-PhoneNumber="@animal.User.PhoneNumber"
+                                              class="shelter-name-link">
+                                               <i class="fas fa-store"></i> @animal.User.UserName
                                            </a>
+                                           @if (isAuthenticated)
+                                           {
+                                               <a asp-controller="Chat" asp-action="index" asp-route-receiverId="@animal.Userid" class="shelter-chat-btn">
+                                                   <i class="fas fa-comments"></i> Chat with Shelter
+                                               </a>
+                                           }
+                                           else
+                                           {
+                                               var shelterChatUrl = Url.Action("index", "Chat", new { receiverId = animal.Userid });
+                                               <a href="javascript:void(0)" onclick="showLoginModal('@Html.Raw(shelterChatUrl)')" class="shelter-chat-btn">
+                                                   <i class="fas fa-comments"></i> Chat with Shelter
+                                               </a>
+                                           }
                                        </div>
                                    }
                                    else
                                    {
-                                        <form asp-controller="Request" asp-action="create" method="post">
-                                            <input type="hidden" name="AnimalId" value="@animal.AnimalId" />
-                                            <input type="hidden" name="Useridreq" value="@animal.Userid" />
-                                            <input type="hidden" name="Userid" value="@userId" />
-                                            <button asp-controller="Request" asp-action="Create" class="btn adopt-btn">
-                                                <i class="fas fa-heart"></i>
-                                                Adopt Me
-                                            </button>
-                                        </form>
-                                   }
-                                    
-                                    <div class="mt-2">
-                                        @if (animal.MedicalRecords != null && animal.MedicalRecords.Any())
-                                        {
-                                            <a asp-controller="MedicalRecord" asp-action="Details" asp-route-animalId="@animal.AnimalId" class="btn btn-outline-info w-100">
-                                                <i class="fas fa-notes-medical"></i> View Medical Record
+                                        <div class="d-flex gap-2">
+                                            <a asp-action="Details" asp-route-id="@animal.AnimalId" class="btn btn-outline-pink flex-grow-1">
+                                                <i class="fas fa-eye"></i> Details
                                             </a>
-                                        }
-                                        else
-                                        {
-                                            <div class="alert alert-secondary py-1 px-2 text-center small mb-0">
-                                                <i class="fas fa-info-circle"></i> Record isn't available
-                                            </div>
-                                        }
-                                    </div>
+                                            @if (isAuthenticated)
+                                            {
+                                                <form class="adopt-form flex-grow-1" data-animal-id="@animal.AnimalId">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="AnimalId" value="@animal.AnimalId" />
+                                                    <input type="hidden" name="Useridreq" value="@animal.Userid" />
+                                                    <input type="hidden" name="Userid" value="@userId" />
+                                                    <button type="submit" class="btn adopt-btn w-100">
+                                                        <i class="fas fa-heart"></i> Adopt
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                var adoptUrl = Url.Action("Details", "Animal", new { id = animal.AnimalId });
+                                                <div class="flex-grow-1">
+                                                    <button type="button" onclick="showLoginModal('@Html.Raw(adoptUrl)')" class="btn adopt-btn w-100">
+                                                        <i class="fas fa-heart"></i> Adopt
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                   }
                                 }
                                 else
                                 {
-                                    <div class="d-flex gap-2 mt-2">
-                                        <a asp-action="Edit" asp-route-id="@animal.AnimalId" class="btn btn-outline-primary flex-grow-1">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                        @if (animal.MedicalRecords != null && animal.MedicalRecords.Any())
-                                        {
-                                            <a asp-controller="MedicalRecord" asp-action="Details" asp-route-animalId="@animal.AnimalId" class="btn btn-outline-info flex-grow-1">
-                                                <i class="fas fa-notes-medical"></i> Record
-                                            </a>
-                                        }
-                                        else
-                                        {
-                                            <a asp-controller="MedicalRecord" asp-action="Create" asp-route-animalid="@animal.AnimalId" class="btn btn-outline-warning flex-grow-1">
-                                                <i class="fas fa-plus-circle"></i> Add Record
-                                            </a>
-                                        }
-                                        
-                                        <!-- Delete Button Section -->
-                                        <div class="flex-grow-1">
-                                            <span id="@("deletespan" + animal.AnimalId)">
-                                                <button onclick="deleteconfirm('@animal.AnimalId', true)" class="btn btn-outline-danger w-100">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </span>
-                                            
-                                            <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none;">
-                                                <div class="d-flex gap-1">
-                                                    <span class="text-danger small d-block mb-1 w-100 text-center">Are you sure?</span>
-                                                    <form asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="w-50">
-                                                        <button type="submit" class="btn btn-danger btn-sm w-100">Yes</button>
-                                                    </form>
-                                                    <button onclick="deleteconfirm('@animal.AnimalId', false)" class="btn btn-secondary btn-sm w-50">No</button>
-                                                </div>
-                                            </span>
+                                    @if (animal.IsAdopted)
+                                    {
+                                        <!-- Adopted animals - only delete option -->
+                                        <div class="alert alert-success py-2 px-3 mb-2 text-center small">
+                                            <i class="fas fa-check-circle me-1"></i> This animal has found a new home!
                                         </div>
-                                    </div>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <!-- Delete Button Section -->
+                                            <div class="flex-grow-1">
+                                                <span id="@("deletespan" + animal.AnimalId)">
+                                                    <button onclick="deleteconfirm('@animal.AnimalId', true)" class="btn btn-outline-danger w-100">
+                                                        <i class="fas fa-trash"></i> Remove from List
+                                                    </button>
+                                                </span>
+                                                
+                                                <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none;">
+                                                    <div class="d-flex gap-1">
+                                                        <span class="text-danger small d-block mb-1 w-100 text-center">Are you sure?</span>
+                                                        <form asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="w-50">
+                                                            <button type="submit" class="btn btn-danger btn-sm w-100">Yes</button>
+                                                        </form>
+                                                        <button onclick="deleteconfirm('@animal.AnimalId', false)" class="btn btn-secondary btn-sm w-50">No</button>
+                                                    </div>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <!-- Non-adopted animals - full options -->
+                                        <div class="d-flex gap-2 mt-2">
+                                            <a asp-action="Edit" asp-route-id="@animal.AnimalId" class="btn btn-outline-primary flex-grow-1">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                            @if (animal.MedicalRecords != null && animal.MedicalRecords.Any())
+                                            {
+                                                <a asp-controller="MedicalRecord" asp-action="Details" asp-route-animalId="@animal.AnimalId" class="btn btn-outline-info flex-grow-1">
+                                                    <i class="fas fa-notes-medical"></i> Record
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a asp-controller="MedicalRecord" asp-action="Create" asp-route-animalid="@animal.AnimalId" class="btn btn-outline-warning flex-grow-1">
+                                                    <i class="fas fa-plus-circle"></i> Add Record
+                                                </a>
+                                            }
+                                            
+                                            <!-- Delete Button Section -->
+                                            <div class="flex-grow-1">
+                                                <span id="@("deletespan" + animal.AnimalId)">
+                                                    <button onclick="deleteconfirm('@animal.AnimalId', true)" class="btn btn-outline-danger w-100">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </span>
+                                                
+                                                <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none;">
+                                                    <div class="d-flex gap-1">
+                                                        <span class="text-danger small d-block mb-1 w-100 text-center">Are you sure?</span>
+                                                        <form asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="w-50">
+                                                            <button type="submit" class="btn btn-danger btn-sm w-100">Yes</button>
+                                                        </form>
+                                                        <button onclick="deleteconfirm('@animal.AnimalId', false)" class="btn btn-secondary btn-sm w-50">No</button>
+                                                    </div>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
                                 }
                             </div>
                         </div>
@@ -206,11 +380,21 @@
                             <p class="empty-state-message">Be the first to add an animal for adoption and help them find a loving home!</p>
                         }
                         <div class="empty-state-actions">
-
-                            <a asp-controller="Animal" asp-action="Create" class="btn btn-primary">
-                                <i class="fas fa-plus"></i>
-                                Add an Animal
-                            </a>
+                            @if (isAuthenticated)
+                            {
+                                <a asp-controller="Animal" asp-action="Create" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Add an Animal
+                                </a>
+                            }
+                            else
+                            {
+                                var addAnimalUrl = Url.Action("Create", "Animal");
+                                <a href="javascript:void(0)" onclick="showLoginModal('@Html.Raw(addAnimalUrl)')" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Add an Animal
+                                </a>
+                            }
                         </div>
                     </div>
                 </div>

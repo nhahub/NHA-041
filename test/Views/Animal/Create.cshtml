@@ -1,4 +1,4 @@
-﻿@model test.ModelViews.CreateAnimalViewModel
+@model test.ViewModels.CreateAnimalViewModel
 @{
     ViewData["Title"] = "Add New Animal - HappyPaws Haven";
 }
@@ -8,7 +8,7 @@
     <div class="form-container">
         <div class="form-header">
             <h1 class="form-title">Add a New Animal</h1>
-            <p class="form-description">Fill in the details below to add a new animal to our shelter 🐾❤️</p>
+            <p class="form-description">Fill in the details below to add a new animal to our shelter 🐾</p>
         </div>
 
         <form asp-action="Create" method="post" enctype="multipart/form-data" class="animal-form">
@@ -19,11 +19,11 @@
 
             <div class="form-group">
                 <label asp-for="Age" class="form-label">Animal Age</label>
-                <input type="number" asp-for="Age" class="form-input" placeholder="Enter animal's age" required>
+                <input type="number" asp-for="Age" class="form-input" placeholder="Enter animal's age" min="1" required>
             </div>
             <div class="form-group">
                 <label asp-for="Type" class="form-label">Animal Type</label>
-                <select asp-for="Type" class="form-input" required>
+                <select asp-for="Type" class="form-input" id="animalType" required>
                     <option value="">-- Select Animal Type --</option>
                     <option value="Dog">Dog</option>
                     <option value="Cat">Cat</option>
@@ -35,6 +35,45 @@
                     <option value="Other">Other</option>
                 </select>
             </div>
+
+            <!-- Breed Selection -->
+            <div class="form-group" id="breedGroup" style="display: none;">
+                <label asp-for="Breed" class="form-label">Breed</label>
+                <select asp-for="Breed" class="form-input" id="breedSelect">
+                    <option value="">-- Select Breed --</option>
+                </select>
+            </div>
+
+            <!-- Custom Breed Input (shown when "Other" breed is selected) -->
+            <div class="form-group" id="customBreedGroup" style="display: none;">
+                <label asp-for="CustomBreed" class="form-label">Enter Breed</label>
+                <input type="text" asp-for="CustomBreed" class="form-input" id="customBreedInput" placeholder="Enter the breed">
+            </div>
+
+            <!-- Gender Selection -->
+            <div class="form-group">
+                <label asp-for="Gender" class="form-label">Gender</label>
+                <div class="gender-selector">
+                    <label class="gender-option">
+                        <input type="radio" asp-for="Gender" value="Male" required>
+                        <i class="fas fa-mars"></i>
+                        <span>Male</span>
+                    </label>
+                    <label class="gender-option">
+                        <input type="radio" asp-for="Gender" value="Female" required>
+                        <i class="fas fa-venus"></i>
+                        <span>Female</span>
+                    </label>
+                </div>
+                <span asp-validation-for="Gender" class="text-danger"></span>
+            </div>
+
+            <!-- About Section (Optional) -->
+            <div class="form-group">
+                <label asp-for="About" class="form-label">About (Optional)</label>
+                <textarea asp-for="About" class="form-input" rows="4" placeholder="Tell us more about this animal... personality, history, special needs, etc."></textarea>
+            </div>
+
             <div class="form-group">
                 <label asp-for="Photo" class="form-label">Animal Picture</label>
                 <input type="file" asp-for="Photo" class="form-file-input" required>

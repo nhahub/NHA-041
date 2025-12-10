@@ -1,62 +1,201 @@
-@model List<test.Models.ContactMessage>
+@model test.ViewModels.AdminDashboardViewModel
+@using Microsoft.AspNetCore.Identity
+@using test.Models
+@inject UserManager<ApplicationUser> userManager
 @{
     ViewData["Title"] = "Admin Dashboard";
 }
 
-<section class="theme-section" style="background: #f8f9fa; min-height: 80vh;">
+<section class="admin-dashboard" style="background: linear-gradient(135deg, #fff0f5 0%, #f5d9e5 100%);">
     <div class="container">
-        <div class="theme-header text-center mb-5">
-            <h1 class="theme-title display-4 fw-bold text-dark mb-3">
+        <!-- Header -->
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold text-dark mb-2">
                 <i class="fas fa-user-shield text-pink me-3"></i>Admin Dashboard
             </h1>
-            <p class="theme-subtitle lead text-muted">Manage your application and view user inquiries</p>
+            <p class="text-muted lead mb-0">Manage your application and view user inquiries</p>
         </div>
 
-        <div class="theme-card p-4 border-0 shadow-sm bg-white rounded-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="h4 fw-bold m-0"><i class="fas fa-envelope me-2 text-pink"></i>Contact Messages</h2>
-                <span class="badge bg-pink rounded-pill px-3 py-2">@Model.Count() Messages</span>
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 admin-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-pink-subtle rounded-circle p-3 admin-icon-bg">
+                                <i class="fas fa-users text-pink fa-lg"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-1">@Model.TotalUsers.ToString("N0")</h3>
+                        <p class="text-muted small mb-0">Total Users</p>
+                    </div>
+                </div>
             </div>
 
-            @if (Model == null || !Model.Any())
-            {
-                <div class="text-center py-5">
-                    <div class="icon mb-3 text-muted" style="font-size: 3rem;">
-                        <i class="fas fa-inbox"></i>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 admin-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-pink-subtle rounded-circle p-3 admin-icon-bg">
+                                <i class="fas fa-paw text-pink fa-lg"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-1">@Model.AnimalsAvailable</h3>
+                        <p class="text-muted small mb-0">Animals Available</p>
                     </div>
-                    <p class="text-muted">No messages found.</p>
                 </div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="border-0 py-3 ps-4 rounded-start">Date</th>
-                                <th class="border-0 py-3">Name</th>
-                                <th class="border-0 py-3">Email</th>
-                                <th class="border-0 py-3 pe-4 rounded-end">Message</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var message in Model)
-                            {
-                                <tr>
-                                    <td class="ps-4 text-muted">@message.SubmittedAt.ToString("g")</td>
-                                    <td class="fw-bold text-dark">@message.Name</td>
-                                    <td>
-                                        <a href="mailto:@message.Email" class="text-pink text-decoration-none">
-                                            @message.Email
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 admin-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-pink-subtle rounded-circle p-3 admin-icon-bg">
+                                <i class="fas fa-heart text-pink fa-lg"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-1">@Model.PendingRequests</h3>
+                        <p class="text-muted small mb-0">Pending Requests</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 admin-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-pink-subtle rounded-circle p-3 admin-icon-bg">
+                                <i class="fas fa-comments text-pink fa-lg"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-1">@Model.TotalMessages</h3>
+                        <p class="text-muted small mb-0">Messages</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <h4 class="fw-bold mb-3">Quick Actions</h4>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a asp-controller="Admin" asp-action="AllRequests" class="btn btn-lg px-4 py-3 fw-bold text-white btn-requests">
+                        <i class="fas fa-heart me-2"></i>Review Requests
+                    </a>
+                    <a asp-controller="Admin" asp-action="AllMessages" class="btn btn-lg px-4 py-3 fw-bold text-white btn-messages">
+                        <i class="fas fa-comments me-2"></i>View Messages
+                    </a>
+                    <a asp-controller="Admin" asp-action="ContactMessages" class="btn btn-lg px-4 py-3 fw-bold text-white" style="background: linear-gradient(135deg, #28a745, #20c997); border-radius: 12px;">
+                        <i class="fas fa-envelope me-2"></i>Contact Messages
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+                    <!-- Recent Messages & Pending Requests -->
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100 admin-card">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Recent Messages</h5>
+                                    @{
+                                        var unreadCount = Model.RecentMessages.Count(m => !m.read);
+                                    }
+                                    @if (unreadCount > 0)
+                                    {
+                                        <span class="badge bg-pink rounded-pill px-3 py-2">@unreadCount unread</span>
+                                    }
+                                </div>
+                                
+                                @if (Model.RecentMessages == null || !Model.RecentMessages.Any())
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted mb-0">No messages yet</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var message in Model.RecentMessages)
+                                        {
+                                            <div class="list-group-item border-0 px-0 py-3">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="fw-bold mb-1">@(message.Sender?.UserName ?? "Unknown")</h6>
+                                                        <p class="text-muted small mb-1">@(message.Sender?.Email ?? "")</p>
+                                                        <p class="text-muted small mb-0">@message.Time.ToString("MM/dd/yyyy")</p>
+                                                    </div>
+                                                    @if (!message.read)
+                                                    {
+                                                        <span class="badge bg-danger rounded-circle unread-dot"></span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a asp-controller="Admin" asp-action="AllMessages" class="text-pink text-decoration-none fw-bold">
+                                            View All Messages <i class="fas fa-arrow-right ms-1"></i>
                                         </a>
-                                    </td>
-                                    <td class="pe-4 text-muted">@message.Message</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100 admin-card">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Pending Requests</h5>
+                                    @if (Model.PendingRequestsList.Any())
+                                    {
+                                        <span class="badge rounded-pill px-3 py-2 badge-pending">@Model.PendingRequestsList.Count pending</span>
+                                    }
+                                </div>
+                                
+                                @if (Model.PendingRequestsList == null || !Model.PendingRequestsList.Any())
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-heart fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted mb-0">No pending requests</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var request in Model.PendingRequestsList)
+                                        {
+                                            var requester = Model.RequestUsers.FirstOrDefault(u => u.Id == request.Userid);
+                                            var animal = Model.RequestAnimals.FirstOrDefault(a => a.AnimalId == request.AnimalId);
+                                            
+                                            <div class="list-group-item border-0 px-0 py-3">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="fw-bold mb-1">@(requester?.FullName ?? requester?.UserName ?? "Unknown")</h6>
+                                                        <p class="text-muted small mb-1">
+                                                            Wants to adopt: <strong>@(animal?.Name ?? "Unknown") (@(animal?.Type ?? ""))</strong>
+                                                        </p>
+                                                        <p class="text-muted small mb-0">@DateTime.Now.ToString("MM/dd/yyyy")</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a asp-controller="Admin" asp-action="AllRequests" class="text-decoration-none fw-bold link-requests">
+                                            View All Requests <i class="fas fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            }
         </div>
     </div>
 </section>

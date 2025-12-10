@@ -1,4 +1,4 @@
-﻿@using test.ModelViews
+@using test.ViewModels
 @model registerviewmodel;
 @{
     ViewData["title"] = "Register";
@@ -8,15 +8,21 @@
     <div class="form-container">
         <div class="form-header">
             <h1 class="form-title">Create Account</h1>
-            <p class="form-description">Join HappyPaws Haven today 🐾</p>
+            <p class="form-description">Join HappyPaws Haven today</p>
         </div>
 
-        <form asp-action="register" method="post">
+        <form asp-action="register" method="post" enctype="multipart/form-data">
             <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
             <div class="form-group">
-                <label asp-for="username" class="form-label">Full Name</label>
-                <input type="text" asp-for="username" class="form-input" placeholder="Enter your full name" required>
+                <label asp-for="FullName" class="form-label">Full Name</label>
+                <input type="text" asp-for="FullName" class="form-input" placeholder="Enter your full name" required>
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="username" class="form-label">Username</label>
+                <input type="text" asp-for="username" class="form-input" placeholder="Enter your username" required>
                 <span asp-validation-for="username" class="text-danger"></span>
             </div>
 
@@ -39,17 +45,23 @@
             </div>
 
             <div class="form-group">
+                <label asp-for="Photo" class="form-label">Profile Photo</label>
+                <input type="file" asp-for="Photo" class="form-input" accept="image/*">
+                <span asp-validation-for="Photo" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label">I am a...</label>
                 <div class="role-selector">
                     <div class="role-card">
-                        <input type="radio" asp-for="role" value="User" required checked />
+                        <input type="radio" asp-for="role" value="User" required checked id="roleUser" />
                         <div class="role-card-content">
                             <i class="fas fa-user role-icon"></i>
                             <div>Pet Adopter</div>
                         </div>
                     </div>
                     <div class="role-card">
-                        <input type="radio" asp-for="role" value="Shelter" required />
+                        <input type="radio" asp-for="role" value="Shelter" required id="roleShelter" />
                         <div class="role-card-content">
                             <i class="fas fa-home role-icon"></i>
                             <div>Shelter</div>
@@ -57,6 +69,53 @@
                     </div>
                 </div>
                 <span asp-validation-for="role" class="text-danger"></span>
+            </div>
+
+            <!-- User Location (City Dropdown) -->
+            <div class="form-group" id="userLocationGroup" style="display: none;">
+                <label class="form-label"><i class="fas fa-map-marker-alt me-2"></i>Your City</label>
+                <select name="Location" id="userLocationSelect" class="form-input">
+                    <option value="">-- Select Your City --</option>
+                    <option value="Cairo">Cairo</option>
+                    <option value="Giza">Giza</option>
+                    <option value="Alexandria">Alexandria</option>
+                    <option value="Mansoura">Mansoura</option>
+                    <option value="Port Said">Port Said</option>
+                    <option value="Luxor">Luxor</option>
+                    <option value="Aswan">Aswan</option>
+                    <option value="Tanta">Tanta</option>
+                    <option value="Suez">Suez</option>
+                    <option value="Hurghada">Hurghada</option>
+                    <option value="Ismailia">Ismailia</option>
+                    <option value="Faiyum">Faiyum</option>
+                    <option value="Zagazig">Zagazig</option>
+                    <option value="Damietta">Damietta</option>
+                    <option value="Asyut">Asyut</option>
+                    <option value="Minya">Minya</option>
+                    <option value="Beni Suef">Beni Suef</option>
+                    <option value="Qena">Qena</option>
+                    <option value="Sohag">Sohag</option>
+                    <option value="Sharm El Sheikh">Sharm El Sheikh</option>
+                    <option value="Marsa Alam">Marsa Alam</option>
+                    <option value="El Gouna">El Gouna</option>
+                    <option value="6th of October City">6th of October City</option>
+                    <option value="New Cairo">New Cairo</option>
+                    <option value="Sheikh Zayed City">Sheikh Zayed City</option>
+                </select>
+                <span class="text-danger" id="userLocationError"></span>
+            </div>
+
+            <!-- Shelter Location (Google Maps Link) -->
+            <div class="form-group" id="shelterLocationGroup" style="display: none;">
+                <label asp-for="Location" class="form-label"><i class="fas fa-map-marker-alt me-2"></i>Shelter Location (Google Maps Link)</label>
+                <input type="url" asp-for="Location" id="shelterLocationInput" class="form-input" 
+                       placeholder="https://maps.google.com/..." 
+                       pattern="https://(www\.)?(google\.com/maps|maps\.google\.com|goo\.gl/maps|maps\.app\.goo\.gl).*">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Go to Google Maps, find your shelter location, click "Share" and paste the link here
+                </small>
+                <span asp-validation-for="Location" class="text-danger"></span>
             </div>
 
             <button type="submit" class="submit-btn">

@@ -1,4 +1,4 @@
-﻿using test.Models;
+using test.Models;
 
 namespace test.Interfaces
 {

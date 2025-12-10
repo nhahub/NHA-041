@@ -5,51 +5,109 @@
     @foreach (var animal in Model)
     {
         <div class="col-md-6">
-            <div class="theme-card bg-white rounded-4 shadow-sm overflow-hidden h-100 d-flex flex-column">
-                <div class="position-relative">
-                    <img src="@animal.Photo" class="w-100 object-fit-cover" style="height: 200px;" alt="@animal.Name">
-                    <span class="badge bg-success position-absolute top-0 start-0 m-3 rounded-pill">Available</span>
+            <div class="profile-animal-card bg-white rounded-4 shadow-sm overflow-hidden h-100 d-flex flex-column">
+                <div class="position-relative profile-animal-image-container">
+                    <img src="@animal.Photo" class="w-100 profile-animal-image" alt="@animal.Name">
+                    <div class="profile-animal-overlay"></div>
+                    @if (animal.IsAdopted)
+                    {
+                        <span class="badge position-absolute top-0 start-0 m-3 rounded-pill profile-status-badge" style="background: linear-gradient(135deg, #28a745, #20c997); box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);">
+                            <i class="fas fa-heart me-1"></i>Adopted
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success position-absolute top-0 start-0 m-3 rounded-pill profile-status-badge" style="box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);">Available</span>
+                    }
+                    <span class="badge position-absolute top-0 end-0 m-3 rounded-pill profile-type-badge" style="background: linear-gradient(135deg, #db98b7, #c39797); box-shadow: 0 4px 12px rgba(219, 152, 183, 0.4);">
+                        <i class="fas fa-paw me-1"></i>@animal.Type
+                    </span>
                 </div>
                 <div class="p-4 flex-grow-1 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="fw-bold m-0">@animal.Name</h5>
-                        <span class="badge bg-pink-subtle text-pink rounded-pill">
-                            <i class="fas fa-paw me-1"></i>@animal.Type
-                        </span>
+                    <div class="mb-3">
+                        <h5 class="fw-bold m-0 mb-2" style="color: #2c2c2c; font-size: 1.3rem;">@animal.Name</h5>
                     </div>
-                    <div class="text-muted small mb-3">@animal.Type</div>
                     
-                    <div class="d-flex gap-3 mb-3 text-muted small">
-                        <span><i class="far fa-calendar me-1"></i>@animal.Age years</span>
+                    <div class="d-flex gap-4 mb-3 text-muted small profile-animal-details">
+                        <span class="d-flex align-items-center gap-2">
+                            <i class="far fa-calendar text-pink"></i>
+                            <span>@animal.Age years</span>
+                        </span>
+                        @if (!string.IsNullOrEmpty(animal.Gender))
+                        {
+                            <span class="d-flex align-items-center gap-2">
+                                @if (animal.Gender == "Male")
+                                {
+                                    <i class="fas fa-mars text-primary"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-venus text-danger"></i>
+                                }
+                                <span>@animal.Gender</span>
+                            </span>
+                        }
                     </div>
 
+                    @if (animal.IsAdopted)
+                    {
+                        <div class="alert alert-success py-2 px-3 mb-2 text-center small">
+                            <i class="fas fa-check-circle me-1"></i> Found a new home!
+                        </div>
+                    }
 
                     <div class="mt-auto d-flex gap-2 align-items-center">
                         @if (ViewData["IsOwner"] is bool isOwner && isOwner)
                         {
-                            <a asp-controller="Animal" asp-action="Edit" asp-route-id="@animal.AnimalId" class="btn btn-light text-pink flex-grow-1 rounded-pill">
-                                <i class="fas fa-pen me-2"></i>Edit
+                            <a asp-controller="Animal" asp-action="Details" asp-route-id="@animal.AnimalId" class="btn profile-action-btn profile-btn-view flex-grow-1 rounded-pill">
+                                <i class="fas fa-eye me-2"></i>View
                             </a>
-                            
-                            <span id="@("deletespan" + animal.AnimalId)" class="flex-grow-1">
-                                <a href="#" onclick="deleteconfirm('@animal.AnimalId', true); return false;" class="btn btn-light text-danger w-100 rounded-pill">
-                                    <i class="fas fa-trash me-2"></i>Remove
-                                </a>
-                            </span>
+                            @if (animal.IsAdopted)
+                            {
+                                <!-- Adopted animals - only delete option -->
+                                <span id="@("deletespan" + animal.AnimalId)" class="flex-grow-1">
+                                    <a href="#" onclick="deleteconfirm('@animal.AnimalId', true); return false;" class="btn profile-action-btn profile-btn-delete w-100 rounded-pill">
+                                        <i class="fas fa-trash me-2"></i>Remove
+                                    </a>
+                                </span>
 
-                            <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none" class="flex-grow-1">
-                                <div class="d-flex gap-1 justify-content-end align-items-center">
-                                    <span class="text-danger small fw-bold me-1">Sure?</span>
-                                    <form asp-controller="Animal" asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3">Yes</button>
-                                    </form>
-                                    <a href="#" onclick="deleteconfirm('@animal.AnimalId', false); return false;" class="btn btn-secondary btn-sm rounded-pill px-3">No</a>
-                                </div>
-                            </span>
+                                <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none" class="flex-grow-1">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        <span class="text-danger small fw-bold me-1">Sure?</span>
+                                        <form asp-controller="Animal" asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3">Yes</button>
+                                        </form>
+                                        <a href="#" onclick="deleteconfirm('@animal.AnimalId', false); return false;" class="btn btn-secondary btn-sm rounded-pill px-3">No</a>
+                                    </div>
+                                </span>
+                            }
+                            else
+                            {
+                                <!-- Non-adopted animals - full options -->
+                                <a asp-controller="Animal" asp-action="Edit" asp-route-id="@animal.AnimalId" class="btn profile-action-btn profile-btn-edit flex-grow-1 rounded-pill">
+                                    <i class="fas fa-pen me-2"></i>Edit
+                                </a>
+                                
+                                <span id="@("deletespan" + animal.AnimalId)" class="flex-grow-1">
+                                    <a href="#" onclick="deleteconfirm('@animal.AnimalId', true); return false;" class="btn profile-action-btn profile-btn-delete w-100 rounded-pill">
+                                        <i class="fas fa-trash me-2"></i>Remove
+                                    </a>
+                                </span>
+
+                                <span id="@("deleteConfirmSpan" + animal.AnimalId)" style="display:none" class="flex-grow-1">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        <span class="text-danger small fw-bold me-1">Sure?</span>
+                                        <form asp-controller="Animal" asp-action="Delete" asp-route-id="@animal.AnimalId" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3">Yes</button>
+                                        </form>
+                                        <a href="#" onclick="deleteconfirm('@animal.AnimalId', false); return false;" class="btn btn-secondary btn-sm rounded-pill px-3">No</a>
+                                    </div>
+                                </span>
+                            }
                         }
                         else
                         {
-                            <a asp-controller="Animal" asp-action="Details" asp-route-id="@animal.AnimalId" class="btn btn-light text-pink flex-grow-1 rounded-pill">
+                            <a asp-controller="Animal" asp-action="Details" asp-route-id="@animal.AnimalId" class="btn profile-action-btn profile-btn-view flex-grow-1 rounded-pill">
                                 <i class="fas fa-eye me-2"></i>View Details
                             </a>
                         }

@@ -1,4 +1,4 @@
-﻿namespace test.ViewComponents
+namespace test.ViewComponents
 {
     using Microsoft.AspNetCore.Mvc;
 

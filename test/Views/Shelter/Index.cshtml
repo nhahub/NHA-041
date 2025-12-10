@@ -1,4 +1,4 @@
-﻿@model test.ModelViews.ShelterIndexViewModel
+@model test.ViewModels.ShelterIndexViewModel
 @{
     ViewData["Title"] = "My Shelter";
     var currentView = Context.Request.Query["view"].ToString();
@@ -70,29 +70,22 @@
                     foreach (var product in Model.Products)
                     {
                         <div class="theme-card Shelter-item">
+                            @if (!string.IsNullOrEmpty(product.Photo))
+                            {
+                                <div class="product-image mb-3">
+                                    <img src="@product.Photo" alt="@product.Name" class="img-fluid rounded" style="width: 100%; height: 150px; object-fit: cover;" />
+                                </div>
+                            }
                             <div class="product-hero">
-                                <div class="title">@product.Type</div>
+                                <div class="title">@product.Name</div>
+                                <div class="text-muted small mb-2">
+                                    <i class="fas fa-tag fa-xs"></i> @product.Type
+                                </div>
                             </div>
                             <div class="product-desc truncate-2">@product.Disc</div>
                             <div class="card-actions" style="display:flex; justify-content:space-between; align-items:center;">
-                                <span class="price-pill"><i class="fas fa-dollar-sign"></i>@product.Price</span>
-                                <div class="d-flex gap-2">
-                                    <a asp-action="Edit" asp-route-id="@product.Productid" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="fas fa-edit"></i> Edit</a>
-                                    
-                                    <span id="@("deletespan" + product.Productid)">
-                                        <button onclick="deleteconfirm('@product.Productid', true)" class="btn btn-sm btn-outline-danger rounded-pill">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </span>
-                                    
-                                    <span id="@("deleteConfirmSpan" + product.Productid)" style="display:none;">
-                                        <div class="d-flex gap-1 align-items-center">
-                                            <span class="text-danger small me-1">Sure?</span>
-                                            <a asp-action="Delete" asp-route-id="@product.Productid" class="btn btn-danger btn-sm rounded-pill py-0 px-2">Yes</a>
-                                            <button onclick="deleteconfirm('@product.Productid', false)" class="btn btn-secondary btn-sm rounded-pill py-0 px-2">No</button>
-                                        </div>
-                                    </span>
-                                </div>
+                                <span class="price-pill"><i class="fas fa-dollar-sign"></i>@product.Price.ToString("F2")</span>
+                                <a asp-action="Edit" asp-route-id="@product.Productid" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="fas fa-edit"></i> Edit</a>
                             </div>
                         </div>
                     }
@@ -143,11 +136,31 @@
                                         <i class="fas fa-tag"></i>
                                         <span>@animal.Type</span>
                                     </div>
+                                    @if (!string.IsNullOrEmpty(animal.Gender))
+                                    {
+                                        <div class="animal-detail-item">
+                                            @if (animal.Gender == "Male")
+                                            {
+                                                <i class="fas fa-mars"></i>
+                                                <span>Male</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-venus"></i>
+                                                <span>Female</span>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                                 <div class="d-flex gap-2 mt-2">
+                                    <a asp-controller="Animal" asp-action="Details" asp-route-id="@animal.AnimalId" class="btn btn-outline-pink flex-grow-1">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
                                     <a asp-controller="Animal" asp-action="Edit" asp-route-id="@animal.AnimalId" class="btn btn-outline-primary flex-grow-1">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
                                     @if (animal.MedicalRecords != null && animal.MedicalRecords.Any())
                                     {
                                         <a asp-controller="MedicalRecord" asp-action="Details" asp-route-animalId="@animal.AnimalId" class="btn btn-outline-info flex-grow-1">
@@ -160,10 +173,6 @@
                                             <i class="fas fa-plus-circle"></i> Add Record
                                         </a>
                                     }
-                                    <!-- Simple Delete Link for now to match Product style, or could be full delete logic -->
-                                    <a asp-controller="Animal" asp-action="Delete" asp-route-id="@animal.AnimalId" class="btn btn-outline-danger flex-grow-1">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </a>
                                 </div>
                             </div>
                         </div>

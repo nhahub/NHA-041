@@ -1,10 +1,12 @@
-﻿
+
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using test.Data;
 using test.Interfaces;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
 
 namespace test.Controllers
 
@@ -16,14 +18,19 @@ namespace test.Controllers
     {
 
         private readonly IMedicalRecord _medicalRecordRepo;
+        private readonly IAnimal _animalRepository;
+        private readonly UserManager<ApplicationUser> usermanger;
 
 
 
-        public MedicalRecordController(IMedicalRecord medicalRecordRepo)
+
+        public MedicalRecordController(IMedicalRecord medicalRecordRepo, UserManager<ApplicationUser> userManager,IAnimal animal)
 
         {
 
             _medicalRecordRepo = medicalRecordRepo;
+            usermanger = userManager;
+            _animalRepository = animal;
 
         }
 
@@ -41,6 +48,12 @@ namespace test.Controllers
                 return NotFound();
 
             }
+
+            var currentUserId = usermanger.GetUserId(User);
+            var animalOwnerId =_animalRepository.GetAnimalOwnerId(animalId);
+            var isOwner = currentUserId == animalOwnerId;
+            ViewBag.IsOwner = isOwner;
+
 
             return View(record);
 
@@ -81,7 +94,7 @@ namespace test.Controllers
              record = new MedicalRecord
             {
                 Animalid = model.animalId,
-                Injurys = model.injurys,
+                 injurys=model.injurys,
                 Status = model.status
             };
 
@@ -128,7 +141,7 @@ namespace test.Controllers
 
 
 
-            await _medicalRecordRepo.UpdateAsync(record);
+            await _medicalRecordRepo.Update(record);
 
             return RedirectToAction("Details", new { animalId = record.Animalid });
 
@@ -177,6 +190,22 @@ namespace test.Controllers
 
             return View(allRecords);
 
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleStatus(int animalId)
+        {
+            var record = await _medicalRecordRepo.GetByAnimalIdAsync(animalId);
+            if (record == null)
+            {
+                return NotFound();
+            }
+
+            // Toggle status between Healthy and Unhealthy
+            record.Status = record.Status == "Healthy" ? "Unhealthy" : "Healthy";
+            await _medicalRecordRepo.Update(record);
+
+            return RedirectToAction("Details", new { animalId = animalId });
         }
 
     }

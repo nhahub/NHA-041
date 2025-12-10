@@ -1,4 +1,4 @@
-﻿@using test.ModelViews
+@using test.ViewModels
 @model LoginViewModel
 
 @{
@@ -9,7 +9,7 @@
     <div class="form-container">
         <div class="form-header">
             <h1 class="form-title">Welcome Back</h1>
-            <p class="form-description">Login to continue to HappyPaws Haven 🐾</p>
+            <p class="form-description">Login to continue to HappyPaws Haven</p>
         </div>
 
         <form asp-action="login" method="post" asp-route-ReturnUrl="@Model.returnUrl">

@@ -1,0 +1,116 @@
+@model test.ViewModels.EditProfileViewModel
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<div class="container py-5 mt-5 pt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="theme-card p-4 bg-white rounded-4 shadow-sm">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark">Edit Profile</h2>
+                    <p class="text-muted">Update your account information</p>
+                </div>
+
+                <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                    <!-- Current Photo Preview -->
+                    <div class="text-center mb-4">
+                        @if (!string.IsNullOrEmpty(Model.CurrentPhotoUrl))
+                        {
+                            <img src="@Model.CurrentPhotoUrl" alt="Profile Photo" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #db98b7;">
+                        }
+                        else
+                        {
+                            <div class="profile-avatar bg-pink text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 120px; height: 120px; font-size: 3rem;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label text-muted small text-uppercase fw-bold">
+                            <i class="fas fa-user me-2"></i>Full Name
+                        </label>
+                        <input asp-for="FullName" class="form-control bg-light border-0 rounded-3" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="UserName" class="form-label text-muted small text-uppercase fw-bold">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        <input asp-for="UserName" class="form-control bg-light border-0 rounded-3" />
+                        <span asp-validation-for="UserName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PhoneNumber" class="form-label text-muted small text-uppercase fw-bold">
+                            <i class="fas fa-phone me-2"></i>Phone Number
+                        </label>
+                        <input asp-for="PhoneNumber" class="form-control bg-light border-0 rounded-3" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Photo" class="form-label text-muted small text-uppercase fw-bold">
+                            <i class="fas fa-camera me-2"></i>Change Profile Photo
+                        </label>
+                        <input asp-for="Photo" type="file" class="form-control bg-light border-0 rounded-3" accept="image/*" />
+                        <span asp-validation-for="Photo" class="text-danger"></span>
+                        <small class="text-muted">Leave empty to keep current photo</small>
+                    </div>
+
+                    <!-- Location Field (City for Users) -->
+                    <div class="mb-4">
+                        <label asp-for="Location" class="form-label text-muted small text-uppercase fw-bold">
+                            <i class="fas fa-map-marker-alt me-2"></i>Your City
+                        </label>
+                        <select asp-for="Location" class="form-control bg-light border-0 rounded-3">
+                            <option value="">-- Select Your City --</option>
+                            <option value="Cairo">Cairo</option>
+                            <option value="Giza">Giza</option>
+                            <option value="Alexandria">Alexandria</option>
+                            <option value="Mansoura">Mansoura</option>
+                            <option value="Port Said">Port Said</option>
+                            <option value="Luxor">Luxor</option>
+                            <option value="Aswan">Aswan</option>
+                            <option value="Tanta">Tanta</option>
+                            <option value="Suez">Suez</option>
+                            <option value="Hurghada">Hurghada</option>
+                            <option value="Ismailia">Ismailia</option>
+                            <option value="Faiyum">Faiyum</option>
+                            <option value="Zagazig">Zagazig</option>
+                            <option value="Damietta">Damietta</option>
+                            <option value="Asyut">Asyut</option>
+                            <option value="Minya">Minya</option>
+                            <option value="Beni Suef">Beni Suef</option>
+                            <option value="Qena">Qena</option>
+                            <option value="Sohag">Sohag</option>
+                            <option value="Sharm El Sheikh">Sharm El Sheikh</option>
+                            <option value="Marsa Alam">Marsa Alam</option>
+                            <option value="El Gouna">El Gouna</option>
+                            <option value="6th of October City">6th of October City</option>
+                            <option value="New Cairo">New Cairo</option>
+                            <option value="Sheikh Zayed City">Sheikh Zayed City</option>
+                        </select>
+                        <span asp-validation-for="Location" class="text-danger"></span>
+                    </div>
+
+                    <input type="hidden" asp-for="CurrentPhotoUrl" />
+
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-pink flex-grow-1 rounded-pill py-2">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary flex-grow-1 rounded-pill py-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,54 +10,77 @@ using test.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using test.Services;
-using test.ModelViews;
+using test.ViewModels;
 using test.Repository;
 using test.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using test.Repository;
 
 namespace test.Controllers
 {
-    [Authorize]
-    
     public class AnimalController : Controller
     {
         private readonly IAnimal _animalRepository;
+        private readonly IRequests _requestRepository;
         private readonly PhotoServices _photoServices;
-        private readonly UserManager<IdentityUser> _userManager;
-        public AnimalController(IAnimal animalRepository, PhotoServices photoServices, UserManager<IdentityUser> userManager)
+        private readonly UserManager<ApplicationUser> _userManager;
+        public AnimalController(IAnimal animalRepository, IRequests requestRepository, PhotoServices photoServices, UserManager<ApplicationUser> userManager)
         {
             _animalRepository = animalRepository;
+            _requestRepository = requestRepository;
             _photoServices = photoServices;
             _userManager = userManager;
         }
-        [Authorize(Roles = "User")]
-        public IActionResult Index(String? filter, bool mine)
+        
+        [AllowAnonymous]
+        public IActionResult Index(string? type, string? location, string? gender, bool mine)
         {
+            // If anonymous user tries to access "My Animals", redirect to login
+            if (mine && !User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("login", "Account", new { ReturnUrl = Url.Action("Index", "Animal", new { mine = true }) });
+            }
+            
             var userid = _userManager.GetUserId(User);
-            var animalviewmodel = _animalRepository.AnimalDisplay(filter, userid, mine);
+            var animalviewmodel = _animalRepository.AnimalDisplay(type, location, gender, userid, mine);
             ViewBag.Userid = userid;
+            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
 
             return View(animalviewmodel);
         }
 
+        [Authorize]
         public IActionResult Create()
         {
             return View();
         }
+        
+        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Create([Bind("Name,Type,Age,Photo")] CreateAnimalViewModel animalVM)
+        public async Task<IActionResult> Create(CreateAnimalViewModel animalVM)
         {
 
             if (ModelState.IsValid)
             {
                 var photoresult = await _photoServices.AddPhotoAsync(animalVM.Photo);
                 var userid = _userManager.GetUserId(User);
+                
+                // Determine the final breed value
+                string? finalBreed = animalVM.Breed;
+                if (animalVM.Breed == "Other" || animalVM.Type == "Other")
+                {
+                    finalBreed = !string.IsNullOrWhiteSpace(animalVM.CustomBreed) ? animalVM.CustomBreed : null;
+                }
+                
                 var animal = new Animal
                 {
                     Name = animalVM.Name,
                     Type = animalVM.Type,
                     Age = animalVM.Age,
                     Photo = photoresult.Url.ToString(),
+                    Breed = finalBreed,
+                    Gender = animalVM.Gender,
+                    About = animalVM.About,
                     Userid = userid
                 };
 
@@ -75,6 +98,8 @@ namespace test.Controllers
             }
             return View(animalVM);
         }
+        
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -88,11 +113,14 @@ namespace test.Controllers
                 Id = animal.AnimalId,
                 Name = animal.Name,
                 Type = animal.Type,
-                Age = animal.Age
+                Age = animal.Age,
+                Gender = animal.Gender
             };
             return View(animalVM);
 
         }
+        
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Edit(AnimalEditViewModel animalVM)
         {
@@ -106,6 +134,7 @@ namespace test.Controllers
                 animal.Name = animalVM.Name;
                 animal.Type = animalVM.Type;
                 animal.Age = animalVM.Age;
+                animal.Gender = animalVM.Gender;
                 if (animalVM.Photo != null)
                 {
                     await _photoServices.DeletePhotoAsync(animal.Photo);
@@ -114,11 +143,42 @@ namespace test.Controllers
                 }
                 bool mine = true;
                 _animalRepository.savechanges();
-                return RedirectToAction("Index", new { mine = mine });
+
+                if (User.IsInRole("User"))
+                {
+                    return RedirectToAction("Index", new { mine = true });
+                }
+                else
+                {
+                    return RedirectToAction("Index", "Shelter");
+                }
             }
             return View(animalVM);
 
         }
+        
+        [AllowAnonymous]
+        public async Task<IActionResult> Details(int id)
+        {
+            var animal = await _animalRepository.GetByIdWithDetailsAsync(id);
+            if (animal == null)
+            {
+                return NotFound();
+            }
+            
+            var currentUserId = _userManager.GetUserId(User);
+            ViewBag.IsOwner = User.Identity.IsAuthenticated && animal.Userid == currentUserId;
+            ViewBag.CurrentUserId = currentUserId;
+            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
+            
+            // Check if user already sent a request for this animal
+            ViewBag.HasPendingRequest = currentUserId != null && 
+                await _requestRepository.HasPendingRequestForAnimal(currentUserId, id);
+            
+            return View(animal);
+        }
+
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
@@ -129,7 +189,14 @@ namespace test.Controllers
             }
             await _photoServices.DeletePhotoAsync(animal.Photo);
             await _animalRepository.DeleteAnimal(animal);
-            return RedirectToAction("Index");
+            if (User.IsInRole("User"))
+            {
+                return RedirectToAction("Index", new { mine = true });
+            }
+            else
+            {
+                return RedirectToAction("Index", "Shelter");
+            }
         }
     }
 }

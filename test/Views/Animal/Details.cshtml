@@ -1,0 +1,342 @@
+@model test.Models.Animal
+@using Microsoft.AspNetCore.Identity
+@using test.Models
+@inject SignInManager<ApplicationUser> signInManager
+@{
+    ViewData["Title"] = Model.Name + " - Animal Details";
+    var isOwner = ViewBag.IsOwner as bool? ?? false;
+    var currentUserId = ViewBag.CurrentUserId as string;
+    var medicalRecord = Model.MedicalRecords?.FirstOrDefault();
+    var hasPendingRequest = ViewBag.HasPendingRequest as bool? ?? false;
+    var isAuthenticated = signInManager.IsSignedIn(User);
+}
+
+<section class="animal-details-section" style="background: linear-gradient(135deg, #fff5f8 0%, #fff 100%); min-height: 100vh; padding: 2rem 0; margin-top: 60px;">
+    <div class="container">
+        <!-- Back Button -->
+        <a asp-action="Index" class="btn btn-link text-muted mb-3 ps-3">
+            <i class="fas fa-arrow-left me-2"></i>Back to Animals
+        </a>
+
+        <div class="row g-4">
+            <!-- Left Column - Image & Basic Info -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <!-- Image Container -->
+                    <div class="position-relative">
+                        <img src="@Model.Photo" alt="@Model.Name" class="w-100" style="height: 450px; object-fit: cover;">
+                        
+                        <!-- Status Badge -->
+                        @if (Model.IsAdopted)
+                        {
+                            <span class="badge position-absolute top-0 start-0 m-3 rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #28a745, #20c997); font-size: 0.9rem;">
+                                <i class="fas fa-heart me-1"></i>Adopted
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge position-absolute top-0 start-0 m-3 rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #28a745, #20c997); font-size: 0.9rem;">
+                                <i class="fas fa-check me-1"></i>Available for Adoption
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Animal Info -->
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h1 class="fw-bold mb-1" style="font-size: 2rem;">@Model.Name</h1>
+                                <p class="text-muted mb-0">
+                                    @if (!string.IsNullOrEmpty(Model.Breed))
+                                    {
+                                        <span>@Model.Breed</span><span> • </span>
+                                    }
+                                    <span>@Model.Type</span>
+                                </p>
+                            </div>
+                            <span class="text-muted small">ID: #@Model.AnimalId</span>
+                        </div>
+
+                        <!-- Quick Info Pills -->
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+                                <i class="fas fa-birthday-cake me-1 text-pink"></i>@Model.Age year@(Model.Age != 1 ? "s" : "") old
+                            </span>
+                            @if (!string.IsNullOrEmpty(Model.Gender))
+                            {
+                                <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+                                    @if (Model.Gender == "Male")
+                                    {
+                                        <i class="fas fa-mars me-1" style="color: #3498db;"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-venus me-1" style="color: #e91e8b;"></i>
+                                    }
+                                    @Model.Gender
+                                </span>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.User?.location))
+                            {
+                                <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+                                    <i class="fas fa-map-marker-alt me-1 text-pink"></i>
+                                    @if (Model.User.location.StartsWith("http"))
+                                    {
+                                        <a href="@Model.User.location" target="_blank" class="text-decoration-none text-dark">View Location</a>
+                                    }
+                                    else
+                                    {
+                                        @Model.User.location
+                                    }
+                                </span>
+                            }
+                        </div>
+
+                        <!-- About Section -->
+                        @if (!string.IsNullOrEmpty(Model.About))
+                        {
+                            <div class="about-section">
+                                <h5 class="fw-bold mb-3">
+                                    <i class="fas fa-file-alt me-2 text-pink"></i>About @Model.Name
+                                </h5>
+                                <p class="text-muted mb-0" style="line-height: 1.7;">@Model.About</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Details & Actions -->
+            <div class="col-lg-5">
+                <!-- Details Card -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4">Details</h5>
+
+                        <!-- Detail Items -->
+                        <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                            <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-paw text-pink"></i>
+                            </div>
+                            <div>
+                                <div class="small text-muted">Type</div>
+                                <div class="fw-medium">@Model.Type</div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(Model.Breed))
+                        {
+                            <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                                <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-dna text-pink"></i>
+                                </div>
+                                <div>
+                                    <div class="small text-muted">Breed</div>
+                                    <div class="fw-medium">@Model.Breed</div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                            <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-birthday-cake text-pink"></i>
+                            </div>
+                            <div>
+                                <div class="small text-muted">Age</div>
+                                <div class="fw-medium">@Model.Age year@(Model.Age != 1 ? "s" : "")</div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(Model.Gender))
+                        {
+                            <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                                <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                    @if (Model.Gender == "Male")
+                                    {
+                                        <i class="fas fa-mars" style="color: #3498db;"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-venus" style="color: #e91e8b;"></i>
+                                    }
+                                </div>
+                                <div>
+                                    <div class="small text-muted">Gender</div>
+                                    <div class="fw-medium">@Model.Gender</div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Health Status -->
+                        @if (medicalRecord != null)
+                        {
+                            <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                                <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-heartbeat text-pink"></i>
+                                </div>
+                                <div>
+                                    <div class="small text-muted">Health Status</div>
+                                    <div class="fw-medium">
+                                        @if (medicalRecord.Status == "Healthy")
+                                        {
+                                            <span class="text-success">@medicalRecord.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-warning">@medicalRecord.Status</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (medicalRecord.VaccinationNeededs != null && medicalRecord.VaccinationNeededs.Any())
+                            {
+                                <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                                    <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-syringe text-pink"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Vaccinated</div>
+                                        <div class="fw-medium">
+                                            Yes <i class="fas fa-check-square text-success"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        <!-- Owner Info -->
+                        @if (Model.User != null)
+                        {
+                            <div class="detail-item d-flex align-items-center p-3 rounded-3 mb-2" style="background: #f8f9fa;">
+                                <div class="icon-box me-3" style="width: 40px; height: 40px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-user text-pink"></i>
+                                </div>
+                                <div>
+                                    <div class="small text-muted">Owner</div>
+                                    <div class="fw-medium">
+                                        <a asp-controller="Profile" asp-action="Index" asp-route-userId="@Model.Userid" class="text-decoration-none text-pink">
+                                            @Model.User.UserName
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Medical Record Button -->
+                @if (medicalRecord != null)
+                {
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3">
+                                <i class="fas fa-notes-medical me-2 text-pink"></i>Medical Information
+                            </h5>
+                            <p class="text-muted small mb-3">View complete health records, vaccinations, and medical history.</p>
+                            @if (isAuthenticated)
+                            {
+                                <a asp-controller="MedicalRecord" asp-action="Details" asp-route-animalId="@Model.AnimalId" class="btn btn-outline-pink w-100 rounded-pill">
+                                    <i class="fas fa-file-medical me-2"></i>View Medical Record
+                                </a>
+                            }
+                            else
+                            {
+                                var medicalUrl = Url.Action("Details", "MedicalRecord", new { animalId = Model.AnimalId });
+                                <a href="javascript:void(0)" onclick="showLoginModal('@Html.Raw(medicalUrl)')" class="btn btn-outline-pink w-100 rounded-pill">
+                                    <i class="fas fa-file-medical me-2"></i>View Medical Record
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Take Action</h5>
+
+                        @if (isOwner)
+                        {
+                            @if (Model.IsAdopted)
+                            {
+                                <!-- Adopted - only delete option -->
+                                <div class="alert alert-success text-center mb-3 rounded-3">
+                                    <i class="fas fa-heart me-2"></i>This animal has found a new home!
+                                </div>
+                                <form asp-action="Delete" asp-route-id="@Model.AnimalId" method="post" id="deleteForm">
+                                    <button type="button" onclick="confirmDelete()" class="btn btn-outline-danger w-100 rounded-pill">
+                                        <i class="fas fa-trash me-2"></i>Remove from List
+                                    </button>
+                                </form>
+                                <script>
+                                    function confirmDelete() {
+                                        if (confirm('Are you sure you want to remove this animal from your list?')) {
+                                            document.getElementById('deleteForm').submit();
+                                        }
+                                    }
+                                </script>
+                            }
+                            else
+                            {
+                                <!-- Owner Actions -->
+                                <a asp-action="Edit" asp-route-id="@Model.AnimalId" class="btn btn-pink w-100 rounded-pill mb-2">
+                                    <i class="fas fa-edit me-2"></i>Edit @Model.Name
+                                </a>
+                                @if (medicalRecord == null)
+                                {
+                                    <a asp-controller="MedicalRecord" asp-action="Create" asp-route-animalid="@Model.AnimalId" class="btn btn-outline-pink w-100 rounded-pill">
+                                        <i class="fas fa-plus-circle me-2"></i>Add Medical Record
+                                    </a>
+                                }
+                            }
+                        }
+                        else if (!Model.IsAdopted)
+                        {
+                            @if (!isAuthenticated)
+                            {
+                                <!-- Anonymous user - prompt to login -->
+                                var detailsUrl = Url.Action("Details", "Animal", new { id = Model.AnimalId });
+                                <button type="button" onclick="showLoginModal('@Html.Raw(detailsUrl)')" class="btn btn-pink w-100 rounded-pill py-3" style="font-size: 1.1rem;">
+                                    <i class="fas fa-heart me-2"></i>Adopt @Model.Name
+                                </button>
+                                <p class="text-center text-muted small mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>Please login to send an adoption request
+                                </p>
+                            }
+                            else if (hasPendingRequest)
+                            {
+                                <!-- Already sent request -->
+                                <div class="alert alert-info text-center rounded-3 mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>Adoption request sent! The owner will review your request.
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Adoption Button -->
+                                <form class="adopt-form" data-animal-id="@Model.AnimalId">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="AnimalId" value="@Model.AnimalId" />
+                                    <input type="hidden" name="Userid" value="@currentUserId" />
+                                    <input type="hidden" name="Useridreq" value="@Model.Userid" />
+                                    <button type="submit" class="btn btn-pink w-100 rounded-pill py-3" style="font-size: 1.1rem;">
+                                        <i class="fas fa-heart me-2"></i>Adopt @Model.Name
+                                    </button>
+                                </form>
+                            }
+
+                            <!-- Chat with Owner -->
+                        }
+                        else
+                        {
+                            <div class="alert alert-success text-center mb-0 rounded-3">
+                                <i class="fas fa-heart me-2"></i>This animal has been adopted!
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+

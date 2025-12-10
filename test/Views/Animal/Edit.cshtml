@@ -1,4 +1,4 @@
-@using test.ModelViews
+@using test.ViewModels
 @model AnimalEditViewModel
 @{
     ViewData["Title"] = "Edit Animal - HappyPaws Haven";
@@ -39,6 +39,24 @@
                     <option value="Turtle">Turtle</option>
                     <option value="Other">Other</option>
                 </select>
+            </div>
+
+            <!-- Gender Selection -->
+            <div class="form-group">
+                <label asp-for="Gender" class="form-label">Gender</label>
+                <div class="gender-selector">
+                    <label class="gender-option">
+                        <input type="radio" asp-for="Gender" value="Male">
+                        <i class="fas fa-mars"></i>
+                        <span>Male</span>
+                    </label>
+                    <label class="gender-option">
+                        <input type="radio" asp-for="Gender" value="Female">
+                        <i class="fas fa-venus"></i>
+                        <span>Female</span>
+                    </label>
+                </div>
+                <span asp-validation-for="Gender" class="text-danger"></span>
             </div>
             
             <div class="form-group">

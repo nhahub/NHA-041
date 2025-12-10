@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 namespace test.Models
 {
     public class OrderDetails
@@ -11,7 +11,9 @@ namespace test.Models
         public int productId { get; set; }
         [ForeignKey("productId")]
         public Product ?Product { get; set; }
+       
+       [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]
         public int Quantity { get; set; }
-        public int TotalPrice { get; set; }
+        public decimal TotalPrice { get; set; }
     }
 }

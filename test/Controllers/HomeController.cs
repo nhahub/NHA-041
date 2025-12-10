@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using test.Data;
 using test.Models;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.AspNetCore.Identity;
 
 namespace test.Controllers
 {
@@ -15,9 +16,9 @@ namespace test.Controllers
     {
         private readonly DepiContext _context;
         private readonly test.Interfaces.IContact _contactRepository;
-        private readonly Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public HomeController(test.Interfaces.IContact contactRepository, Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> userManager)
+        public HomeController(test.Interfaces.IContact contactRepository, UserManager<ApplicationUser> userManager)
         {
             _context = new DepiContext();
             _contactRepository = contactRepository;

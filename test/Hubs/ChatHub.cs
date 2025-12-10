@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Security.Claims;
@@ -12,8 +12,8 @@ namespace test.Hubs
     public class ChatHub : Hub
     {
         private readonly DepiContext _context;
-        private readonly UserManager<IdentityUser> _userManager;
-        public ChatHub(DepiContext context,UserManager<IdentityUser> userManager)
+        private readonly UserManager<ApplicationUser> _userManager;
+        public ChatHub(DepiContext context,UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
@@ -40,7 +40,7 @@ namespace test.Hubs
         {
             if (chatMessage != null)
             {
-                chatMessage.read = 0;
+                chatMessage.read = false;
                 chatMessage.Time = DateTime.Now;
                 chatMessage.AnimalId = animalid;
                 _context.ChatMessages.Add(chatMessage);

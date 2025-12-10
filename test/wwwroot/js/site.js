@@ -2,6 +2,76 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
+
+// ============================================
+// LOGIN REQUIRED MODAL - Anonymous User Actions
+// ============================================
+function showLoginModal(returnUrl) {
+    var loginModal = document.getElementById('loginRequiredModal');
+    var loginUrl = '/Account/login';
+    if (returnUrl && returnUrl !== '#' && returnUrl !== '') {
+        loginUrl += '?ReturnUrl=' + encodeURIComponent(returnUrl);
+    }
+
+    var loginBtn = document.getElementById('loginRedirectBtn');
+    if (loginBtn) {
+        loginBtn.href = loginUrl;
+    }
+
+    if (loginModal && typeof bootstrap !== 'undefined') {
+        try {
+            var modal = new bootstrap.Modal(loginModal);
+            modal.show();
+            return true;
+        } catch (e) {
+            console.error('Error showing modal:', e);
+        }
+    }
+    
+    // Fallback: redirect to login
+    window.location.href = loginUrl;
+    return false;
+}
+
+(function () {
+
+    // Handle clicks on .require-login elements
+    document.addEventListener('click', function (e) {
+        var target = e.target;
+        
+        // Walk up the DOM tree to find .require-login
+        while (target && target !== document) {
+            if (target.classList && target.classList.contains('require-login')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                var returnUrl = target.getAttribute('data-return-url') || target.getAttribute('href') || window.location.href;
+                showLoginModal(returnUrl);
+                return false;
+            }
+            target = target.parentElement;
+        }
+    }, true); // Use capture phase
+
+    // Handle form submissions on .require-login-form
+    document.addEventListener('submit', function (e) {
+        var target = e.target;
+        
+        while (target && target !== document) {
+            if (target.classList && target.classList.contains('require-login-form')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                var returnUrl = target.getAttribute('data-return-url') || window.location.href;
+                showLoginModal(returnUrl);
+                return false;
+            }
+            target = target.parentElement;
+        }
+    }, true); // Use capture phase
+})();
 function deleteconfirm(UserId, IsdDeletecClicked) {
     var spanid = "deleteConfirmSpan" + UserId;
     var deletespan = "deletespan" + UserId;
@@ -513,6 +583,92 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+// Adoption Request Form Handler
+document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("submit", function (event) {
+        const form = event.target;
+
+        // Handle Adopt Me form
+        if (form.classList.contains('adopt-form')) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const animalId = form.getAttribute('data-animal-id');
+            const animalCard = document.getElementById('animal-card-' + animalId);
+
+            fetch("/Request/Create", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, "success");
+                    if (animalCard) {
+                        // On Index page - remove the card
+                        animalCard.style.transition = 'opacity 0.5s, transform 0.5s';
+                        animalCard.style.opacity = '0';
+                        animalCard.style.transform = 'scale(0.8)';
+                        setTimeout(() => animalCard.remove(), 500);
+                    } else {
+                        // On Details page - replace the form with success message
+                        const actionCard = form.closest('.card-body');
+                        if (actionCard) {
+                            // Hide the form and any chat button
+                            form.style.display = 'none';
+                            const chatBtn = actionCard.querySelector('a[href*="Chat"]');
+                            if (chatBtn) chatBtn.style.display = 'none';
+                            
+                            // Add success message
+                            const successDiv = document.createElement('div');
+                            successDiv.className = 'alert alert-success text-center rounded-3';
+                            successDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Adoption request sent! The owner will review your request.';
+                            form.parentNode.insertBefore(successDiv, form);
+                        }
+                    }
+                } else {
+                    showToast(data.message || "Failed to send adoption request.", "error");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast("An error occurred while sending the request.", "error");
+            });
+        }
+
+        // Handle Complete Adoption form
+        if (form.classList.contains('complete-adoption-form')) {
+            event.preventDefault();
+            const formData = new FormData(form);
+
+            fetch("/Request/CompleteAdoption", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, "success");
+                    // Remove all request cards for this animal
+                    const animalId = data.animalId;
+                    const allCardsForAnimal = document.querySelectorAll(`.request-card[data-animal-id="${animalId}"]`);
+                    allCardsForAnimal.forEach(card => {
+                        card.style.transition = 'opacity 0.5s, transform 0.5s';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.8)';
+                        setTimeout(() => card.remove(), 500);
+                    });
+                } else {
+                    showToast(data.message || "Failed to complete adoption.", "error");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast("An error occurred while completing the adoption.", "error");
+            });
+        }
+    });
+});
+
 // Notification Dropdown Functionality
 document.addEventListener("DOMContentLoaded", function () {
     // Handle Notification Dropdown Open (Bootstrap Event)
@@ -548,6 +704,109 @@ document.addEventListener("DOMContentLoaded", function () {
             }).fail(function () {
                 list.html('<li><span class="dropdown-item text-danger text-center">Error loading messages</span></li>');
             });
+        });
+    }
+});
+
+// Registration Form - Location Field Toggle
+document.addEventListener('DOMContentLoaded', function () {
+    const roleUser = document.getElementById('roleUser');
+    const roleShelter = document.getElementById('roleShelter');
+    const userLocationGroup = document.getElementById('userLocationGroup');
+    const shelterLocationGroup = document.getElementById('shelterLocationGroup');
+    const userLocationSelect = document.getElementById('userLocationSelect');
+    const shelterLocationInput = document.getElementById('shelterLocationInput');
+
+    // Only run if we're on the registration page
+    if (roleUser && roleShelter && userLocationGroup && shelterLocationGroup) {
+        function toggleLocationField() {
+            if (roleShelter.checked) {
+                userLocationGroup.style.display = 'none';
+                shelterLocationGroup.style.display = 'block';
+                if (userLocationSelect) userLocationSelect.removeAttribute('name');
+                if (shelterLocationInput) {
+                    shelterLocationInput.setAttribute('name', 'Location');
+                    shelterLocationInput.required = true;
+                }
+                if (userLocationSelect) userLocationSelect.required = false;
+            } else {
+                userLocationGroup.style.display = 'block';
+                shelterLocationGroup.style.display = 'none';
+                if (userLocationSelect) userLocationSelect.setAttribute('name', 'Location');
+                if (shelterLocationInput) shelterLocationInput.removeAttribute('name');
+                if (userLocationSelect) userLocationSelect.required = false;
+                if (shelterLocationInput) shelterLocationInput.required = false;
+            }
+        }
+
+        roleUser.addEventListener('change', toggleLocationField);
+        roleShelter.addEventListener('change', toggleLocationField);
+
+        // Initial check
+        toggleLocationField();
+    }
+});
+
+// Animal Breed Selection Logic
+document.addEventListener('DOMContentLoaded', function () {
+    // Breeds data for each animal type
+    const breedsData = {
+        'Dog': ['Golden Retriever', 'Labrador Retriever', 'German Shepherd', 'Bulldog', 'Poodle', 'Beagle', 'Husky', 'Rottweiler', 'Boxer', 'Dachshund', 'Great Dane', 'Doberman', 'Shih Tzu', 'Other'],
+        'Cat': ['Persian', 'Siamese', 'Maine Coon', 'British Shorthair', 'Bengal', 'Ragdoll', 'Sphynx', 'Abyssinian', 'Scottish Fold', 'Russian Blue', 'Other'],
+        'Bird': ['Parrot', 'Canary', 'Cockatiel', 'Budgie', 'Finch', 'Lovebird', 'Macaw', 'Cockatoo', 'African Grey', 'Parakeet', 'Other'],
+        'Rabbit': ['Holland Lop', 'Mini Rex', 'Lionhead', 'Dutch', 'Flemish Giant', 'Netherland Dwarf', 'Mini Lop', 'Rex', 'English Angora', 'Other'],
+        'Hamster': ['Syrian', 'Dwarf Campbell', 'Dwarf Winter White', 'Roborovski', 'Chinese', 'Other'],
+        'Fish': ['Goldfish', 'Betta', 'Guppy', 'Angelfish', 'Neon Tetra', 'Molly', 'Oscar', 'Discus', 'Koi', 'Other'],
+        'Turtle': ['Red-Eared Slider', 'Box Turtle', 'Painted Turtle', 'Snapping Turtle', 'Map Turtle', 'Musk Turtle', 'Softshell Turtle', 'Other']
+    };
+
+    const animalTypeSelect = document.getElementById('animalType');
+    const breedGroup = document.getElementById('breedGroup');
+    const breedSelect = document.getElementById('breedSelect');
+    const customBreedGroup = document.getElementById('customBreedGroup');
+    const customBreedInput = document.getElementById('customBreedInput');
+
+    // Only run if we're on the animal create page
+    if (animalTypeSelect && breedGroup && breedSelect) {
+        // Handle animal type change
+        animalTypeSelect.addEventListener('change', function () {
+            const selectedType = this.value;
+
+            // Clear previous selections
+            breedSelect.innerHTML = '<option value="">-- Select Breed --</option>';
+            if (customBreedInput) customBreedInput.value = '';
+            if (customBreedGroup) customBreedGroup.style.display = 'none';
+
+            if (selectedType && selectedType !== 'Other') {
+                // Show breed dropdown for known types
+                breedGroup.style.display = 'block';
+
+                const breeds = breedsData[selectedType] || [];
+                breeds.forEach(breed => {
+                    const option = document.createElement('option');
+                    option.value = breed;
+                    option.textContent = breed;
+                    breedSelect.appendChild(option);
+                });
+            } else if (selectedType === 'Other') {
+                // For "Other" type, show custom breed input directly
+                breedGroup.style.display = 'none';
+                if (customBreedGroup) customBreedGroup.style.display = 'block';
+            } else {
+                breedGroup.style.display = 'none';
+            }
+        });
+
+        // Handle breed selection change
+        breedSelect.addEventListener('change', function () {
+            const selectedBreed = this.value;
+
+            if (selectedBreed === 'Other') {
+                if (customBreedGroup) customBreedGroup.style.display = 'block';
+            } else {
+                if (customBreedGroup) customBreedGroup.style.display = 'none';
+                if (customBreedInput) customBreedInput.value = '';
+            }
         });
     }
 });

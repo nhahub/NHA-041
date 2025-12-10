@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using test.Data;
 using test.Interfaces;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
 using test.Repository;
+using test.Services;
+
 
 namespace test.Controllers
 {
@@ -13,33 +15,58 @@ namespace test.Controllers
     { private readonly ITransaction _transactionRepository;
         private readonly IOrder _orderRepository;
         private readonly DepiContext _context;
-        private readonly UserManager<IdentityUser> _usermanager;
+        private readonly UserManager<ApplicationUser> _usermanager;
+        private readonly BraintreeService _braintreeService;
 
-        public TransactionController(ITransaction transaction, IOrder orderRepository,DepiContext depiContext,UserManager<IdentityUser> userManager)
+        public TransactionController(ITransaction transaction, IOrder orderRepository,DepiContext depiContext,UserManager<ApplicationUser> userManager,BraintreeService braintreeService)
         {
             _transactionRepository = transaction;
             _orderRepository = orderRepository;
             _context = depiContext;
             _usermanager = userManager;
+            _braintreeService = braintreeService;
         }
 
         [HttpGet]
-public IActionResult ProccessPayment()
+        public IActionResult ProccessPayment()
         {
-            var userid =_usermanager.GetUserId(User);
+            var userid = _usermanager.GetUserId(User);
             var paymentmethods = _context.PaymentMethods.Where(p => p.UserId == userid).ToList();
-            var order = _context.Orders.FirstOrDefault(o=>o.UserId==userid && o.OrderStatus==0);
-            var orderdetails = new List<OrderDetails>();
-            orderdetails = _context.OrderDetails
+            var order = _context.Orders.FirstOrDefault(o => o.UserId == userid && o.OrderPaid == false);
+            
+            if (order == null)
+            {
+                return View(new ProccessPaymentViewModel
+                {
+                    paymentMethods = paymentmethods,
+                    orderDetails = new List<OrderDetails>()
+                });
+            }
+
+            var orderdetails = _context.OrderDetails
                 .Where(od => od.OrderId == order.OrderId)
                 .Include(od => od.Product)
                 .ToList();
+
+            // Group items by product and sum quantities
+            var groupedItems = orderdetails
+                .GroupBy(od => od.Product?.Type ?? "Unknown")
+                .Select(g => new GroupedItemViewModel
+                {
+                    ProductType = g.Key,
+                    Quantity = g.Sum(x => x.Quantity),
+                    TotalPrice = g.Sum(x => x.TotalPrice)
+                })
+                .ToList();
+
             var model = new ProccessPaymentViewModel
             {
                 paymentMethods = paymentmethods,
-                orderid= order.OrderId,
-                totalprice= order.TotalPrice,
-                orderDetails = orderdetails
+                orderid = order.OrderId,
+                totalprice = order.TotalPrice,
+                orderDetails = orderdetails,
+                GroupedItems = groupedItems,
+                TotalQuantity = orderdetails.Sum(x => x.Quantity)
             };
             return View(model);
         }
@@ -47,8 +74,12 @@ public IActionResult ProccessPayment()
         public async Task<IActionResult> ProccessPayment(ProccessPaymentViewModel model)
         {
            var order=await _orderRepository.GetOrderFortransaction(model.orderid);
-            var payment= _context.PaymentMethods.FirstOrDefault(p => p.PaymentMethodId == model.selectedPaymentMethodid);
-            
+            var payment= _context.PaymentMethods.Where(p => p.PaymentMethodId == model.selectedPaymentMethodid).Select(p=>new PaymentMethods
+            {
+                PaymentMethodId=p.PaymentMethodId,
+                GatewayToken=p.GatewayToken
+            }).FirstOrDefault();
+
             if (payment == null)
             {
                 return Json(new { status = "failed", message = "Please select a valid payment method." });
@@ -67,7 +98,7 @@ public IActionResult ProccessPayment()
                     var Message = "Order not found.";
                     return Json(new { status = "failed", message = Message });
                 }
-                if (order.OrderStatus == 1)
+                if (order.OrderPaid == true)
                 {
                     var Message = "Order is already paid.";
                     return Json(new { status = "failed", message = Message });
@@ -88,20 +119,27 @@ public IActionResult ProccessPayment()
                         return Json(new { status = "failed", message = Message });
                     }
                 }
-                // Simulate payment processing logic here
-                var paymentresult = _transactionRepository.AddTransaction(new Transactions
+                // Process payment with Braintree
+                var paymentResult = _braintreeService.Sale(payment.GatewayToken, order.TotalPrice);
+
+                if (!paymentResult.Success)
+                {
+                    _transactionRepository.rollbackTransaction();
+                    return Json(new { status = "failed", message = paymentResult.ErrorMessage ?? "Payment failed." });
+                }
+
+                var transactionResult = _transactionRepository.AddTransaction(new Transactions
                 {
                     OrderId = order.OrderId,
                     TransactionDate = DateTime.Now,
                     Amount = order.TotalPrice,
-                    PaymentMethod = payment,
+                    PaymentMethodId = payment.PaymentMethodId,
                     Status = "Paid"
-
                 });
 
-                if (paymentresult)
+                if (transactionResult)
                 {
-                    order.OrderStatus = 1;
+                    order.OrderPaid = true;
                     foreach(var item in orderdetails)
                     {
                         item.Product.Quantity -= item.Quantity;

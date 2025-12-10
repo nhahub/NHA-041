@@ -8,6 +8,9 @@
 5. [UI/UX Design](#5-uiux-design)
 6. [System Architecture](#6-system-architecture)
 7. [Features & Modules](#7-features--modules)
+8. [Payment Processing](#8-payment-processing)
+9. [Authentication & Authorization](#9-authentication--authorization)
+10. [Configuration & Setup](#10-configuration--setup)
 
 ---
 
@@ -26,10 +29,11 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 | **Backend Framework** | ASP.NET Core MVC (.NET 9) |
 | **Database** | SQL Server |
 | **ORM** | Entity Framework Core |
-| **Authentication** | ASP.NET Core Identity |
+| **Authentication** | ASP.NET Core Identity, Google OAuth |
 | **Real-time Communication** | SignalR |
 | **Image Storage** | Cloudinary |
-| **Email Service** | SMTP |
+| **Email Service** | SMTP (Gmail) |
+| **Payment Processing** | Braintree |
 | **Frontend** | Razor Views, Bootstrap 5, Font Awesome |
 
 ### 1.4 Project Objectives
@@ -185,10 +189,14 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 │                              ANIMALS                                     │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  AnimalId (PK)    │ INT          │ Primary Key, Auto-increment          │
-│  Name             │ NVARCHAR     │ Animal name                          │
+│  Name             │ NVARCHAR(100)│ Animal name                          │
 │  Age              │ TINYINT      │ Age in years                         │
-│  Type             │ NVARCHAR     │ Species (Dog, Cat, etc.)             │
+│  Type             │ NVARCHAR(50) │ Species (Dog, Cat, etc.)             │
+│  Breed            │ NVARCHAR(50) │ Animal breed                         │
+│  Gender           │ NVARCHAR(10) │ Gender (Male/Female)                 │
 │  Photo            │ NVARCHAR     │ Cloudinary URL                       │
+│  About            │ NVARCHAR(600)│ Animal description                   │
+│  IsAdopted        │ BIT          │ Adoption status (default: false)      │
 │  UserId (FK)      │ NVARCHAR     │ Owner/Shelter ID → AspNetUsers       │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -242,10 +250,13 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 │                              PRODUCTS                                    │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  ProductId (PK)   │ INT          │ Primary Key, Auto-increment          │
-│  Type             │ NVARCHAR     │ Product name/type                    │
-│  Disc             │ NVARCHAR     │ Description                          │
-│  Price            │ DECIMAL      │ Price                                │
+│  Name             │ NVARCHAR(100)│ Product name (required)              │
+│  Type             │ NVARCHAR(50) │ Product type/category                │
+│  Disc             │ NVARCHAR(255)│ Description                          │
+│  Price            │ DECIMAL(18,2) │ Price                                │
 │  Quantity         │ INT          │ Stock quantity                       │
+│  Photo            │ NVARCHAR(500)│ Product image URL                    │
+│  RowVersion       │ TIMESTAMP    │ Concurrency token                    │
 │  UserId (FK)      │ NVARCHAR     │ Seller (Shelter) → AspNetUsers       │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -255,18 +266,19 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 │  OrderId (PK)     │ INT          │ Primary Key, Auto-increment          │
 │  UserId (FK)      │ NVARCHAR     │ Buyer → AspNetUsers                  │
 │  OrderDate        │ DATETIME     │ Order timestamp                      │
-│  TotalAmount      │ DECIMAL      │ Total order value                    │
-│  Status           │ NVARCHAR     │ Order status                         │
+│  TotalPrice       │ DECIMAL(18,2)│ Total order value                    │
+│  OrderPaid        │ BIT          │ Payment status                       │
+│  RowVersion       │ TIMESTAMP    │ Concurrency token                    │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           ORDER DETAILS                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  OrderDetailId(PK)│ INT          │ Primary Key, Auto-increment          │
+│  Id (PK)          │ INT          │ Primary Key, Auto-increment          │
 │  OrderId (FK)     │ INT          │ → Orders                             │
-│  ProductId (FK)   │ INT          │ → Products                           │
+│  productId (FK)   │ INT          │ → Products                           │
 │  Quantity         │ INT          │ Quantity ordered                     │
-│  UnitPrice        │ DECIMAL      │ Price at time of order               │
+│  TotalPrice       │ DECIMAL(18,2)│ Total price for this line item      │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -274,8 +286,9 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 ├─────────────────────────────────────────────────────────────────────────┤
 │  TransactionId(PK)│ INT          │ Primary Key, Auto-increment          │
 │  OrderId (FK)     │ INT          │ → Orders                             │
-│  Amount           │ DECIMAL      │ Transaction amount                   │
-│  PaymentMethod    │ NVARCHAR     │ Payment type                         │
+│  PaymentMethodId(FK)│ INT        │ → PaymentMethods                     │
+│  Amount           │ DECIMAL(18,2)│ Transaction amount                   │
+│  Status           │ NVARCHAR(50)│ Transaction status                   │
 │  TransactionDate  │ DATETIME     │ Transaction timestamp                │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -305,10 +318,12 @@ PetAdopt is a web-based platform that connects animal shelters with potential pe
 │                         PAYMENT METHODS                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  PaymentMethodId  │ INT          │ Primary Key, Auto-increment          │
-│  UserId (FK)      │ NVARCHAR     │ → AspNetUsers                        │
-│  CardNumber       │ NVARCHAR     │ Masked card number                   │
-│  CardType         │ NVARCHAR     │ Visa/Mastercard/etc.                 │
-│  ExpiryDate       │ NVARCHAR     │ Card expiry                          │
+│  UserId (FK)      │ NVARCHAR     │ → AspNetUsers (required)             │
+│  MethodType       │ NVARCHAR(50) │ Payment method type (required)        │
+│  last4Digits      │ NVARCHAR(4)  │ Last 4 digits of card                │
+│  expiryMonth      │ NVARCHAR(2)  │ Expiry month                         │
+│  expiryYear       │ NVARCHAR     │ Expiry year                          │
+│  GatewayToken     │ NVARCHAR     │ Braintree payment token              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -583,10 +598,15 @@ STATUS COLORS
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          EXTERNAL SERVICES                               │
-│  ┌─────────────────┐  ┌─────────────────┐                               │
-│  │    Cloudinary   │  │    SMTP     │                               │
-│  │  (Image Storage)│  │  (Email Service)│                               │
-│  └─────────────────┘  └─────────────────┘                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+│  │    Cloudinary   │  │    SMTP         │  │   Braintree     │         │
+│  │  (Image Storage)│  │  (Email Service)│  │  (Payments)     │         │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘         │
+│                                                                         │
+│  ┌─────────────────┐                                                    │
+│  │  Google OAuth   │                                                    │
+│  │  (Authentication)│                                                    │
+│  └─────────────────┘                                                    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -644,6 +664,8 @@ STATUS COLORS
 | **Product Management** | CRUD for products | ✅ Complete |
 | **Shopping Cart** | Add products, manage cart | ✅ Complete |
 | **Order Processing** | Checkout, order history | ✅ Complete |
+| **Payment Processing** | Braintree integration, payment methods | ✅ Complete |
+| **Google OAuth** | External authentication | ✅ Complete |
 | **Admin Dashboard** | User & animal management | ✅ Complete |
 | **Contact Form** | Public contact page | ✅ Complete |
 
@@ -688,6 +710,61 @@ STATUS COLORS
 | POST | `/Request/Remove` | Delete request |
 | POST | `/Request/CompleteAdoption` | Finalize adoption |
 
+#### Payment Method Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/PaymentMethod/Create` | Add payment method form |
+| POST | `/PaymentMethod/Create` | Save payment method (Braintree) |
+| GET | `/PaymentMethod/Edit/{id}` | Edit payment method form |
+| POST | `/PaymentMethod/Edit/{id}` | Update payment method |
+
+#### Transaction Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Transaction/ProccessPayment` | Payment processing page |
+| POST | `/Transaction/ProccessPayment` | Process payment transaction |
+
+#### Order Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Order` | View orders |
+| POST | `/Order/Create` | Create new order |
+| GET | `/Order/MyOrders` | User's order history |
+
+#### Medical Record Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/MedicalRecord/Create` | Create medical record form |
+| POST | `/MedicalRecord/Create` | Add medical record |
+| GET | `/MedicalRecord/Details/{id}` | View medical record details |
+
+#### Vaccination Needed Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/VaccinationNeeded/Create` | Create vaccination record form |
+| POST | `/VaccinationNeeded/Create` | Add vaccination record |
+
+#### Shelter Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Shelter` | List all shelters |
+| GET | `/Shelter/Details/{id}` | View shelter profile |
+| GET | `/Shelter/MyShelter` | Current user's shelter page |
+
+#### Profile Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Profile` | User profile page |
+| GET | `/Profile/Edit` | Edit profile form |
+| POST | `/Profile/Edit` | Update profile |
+
+#### Admin Controller
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Admin` | Admin dashboard |
+| GET | `/Admin/Users` | Manage users |
+| GET | `/Admin/Animals` | Manage all animals |
+
 ---
 
 
@@ -726,7 +803,111 @@ test/
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** November 2025  
+---
+
+## 8. Payment Processing
+
+### 8.1 Braintree Integration
+
+The platform integrates with Braintree for secure payment processing. The integration includes:
+
+- **Payment Method Management**: Users can add and manage multiple payment methods
+- **Secure Token Storage**: Payment methods are stored as tokens (GatewayToken) in the database
+- **Transaction Processing**: Orders can be processed through Braintree's payment gateway
+- **Sandbox Environment**: Currently configured for testing (can be switched to production)
+
+### 8.2 Payment Flow
+
+```
+1. User adds products to cart
+2. User proceeds to checkout
+3. User selects or adds payment method
+4. Payment method token is stored (Braintree)
+5. Order is created with OrderPaid = false
+6. Transaction is processed via Braintree
+7. On success: OrderPaid = true, Transaction record created
+```
+
+### 8.3 Configuration
+
+Braintree settings are configured in `appsettings.json`:
+
+```json
+{
+  "Braintree": {
+    "MerchantId": "...",
+    "PublicKey": "...",
+    "PrivateKey": "..."
+  }
+}
+```
+
+---
+
+## 9. Authentication & Authorization
+
+### 9.1 Authentication Methods
+
+- **ASP.NET Core Identity**: Primary authentication system
+- **Google OAuth**: External authentication provider
+  - Configured via `Authentication:Google` section
+  - Callback path: `/signin-google`
+  - Includes profile picture claim mapping
+
+### 9.2 User Roles
+
+- **User**: Regular pet adopters
+- **Shelter**: Animal shelter operators
+- **Admin**: System administrators
+
+### 9.3 Role Seeding
+
+Roles are automatically seeded on application startup via `RoleServices.SeedRolesAsync()`.
+
+---
+
+## 10. Configuration & Setup
+
+### 10.1 Connection String
+
+The application uses the connection string key `depiContextConnection`:
+
+```json
+{
+  "ConnectionStrings": {
+    "depiContextConnection": "Server=...;Database=depi;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+  }
+}
+```
+
+### 10.2 Required Configuration Sections
+
+- `ConnectionStrings:depiContextConnection` - Database connection
+- `CloudinarySettings` - Image upload service
+  - `CloudName`
+  - `ApiKey`
+  - `ApiSecret`
+- `Braintree` - Payment processing
+  - `MerchantId`
+  - `PublicKey`
+  - `PrivateKey`
+- `Authentication:Google` - OAuth authentication
+  - `ClientId`
+  - `ClientSecret`
+- `EmailSettings` - Email service configuration (optional, defaults to Gmail SMTP)
+
+### 10.3 Database Migrations
+
+Migrations are located in `test/Migrations/`. To apply:
+
+```bash
+cd test
+dotnet ef database update
+```
+
+---
+
+**Document Version:** 2.0  
+**Last Updated:** January 2025  
 **Authors:** Development Team
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Client;
 using test.Data;
@@ -11,8 +11,8 @@ namespace test.Repository
        
     {
         private readonly DepiContext _context;
-        private readonly UserManager<IdentityUser> _userManager;
-        public ShelterRepository (DepiContext context,UserManager<IdentityUser> userManager)
+        private readonly UserManager<ApplicationUser> _userManager;
+        public ShelterRepository (DepiContext context,UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
@@ -29,17 +29,17 @@ namespace test.Repository
             return products;
         }
 
-        public async Task<List<IdentityUser>> GetAllShelters()
+        public async Task<List<ApplicationUser>> GetAllShelters()
         {
-            List<IdentityUser> identityUsers = new List<IdentityUser>();
+            List<ApplicationUser> applicationUsers = new List<ApplicationUser>();
 
             var shelters1 =await _userManager.Users.ToListAsync();
             foreach (var shelter in shelters1)
                 if(await _userManager.IsInRoleAsync(shelter, "Shelter"))
                 {
-                    identityUsers.Add(shelter);
+                    applicationUsers.Add(shelter);
                 }
-            return identityUsers;
+            return applicationUsers;
         }
 
         public async Task<bool> RemoveProduct(Product product)

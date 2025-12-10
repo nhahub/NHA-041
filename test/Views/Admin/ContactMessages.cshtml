@@ -1,0 +1,65 @@
+@model List<test.Models.ContactMessage>
+@{
+    ViewData["Title"] = "Contact Messages";
+}
+
+<section class="admin-dashboard" style="background: linear-gradient(135deg, #fff0f5 0%, #f5d9e5 100%);">
+    <div class="container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-5 fw-bold text-dark mb-2">
+                        <i class="fas fa-envelope text-pink me-3"></i>Contact Messages
+                    </h1>
+                    <p class="text-muted lead mb-0">View all contact form submissions</p>
+                </div>
+                <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-pink">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Messages List -->
+        <div class="card border-0 shadow-sm admin-card">
+            <div class="card-body p-4">
+                @if (Model == null || !Model.Any())
+                {
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Contact Messages</h5>
+                        <p class="text-muted mb-0">No messages have been submitted yet.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var message in Model)
+                        {
+                            <div class="list-group-item border-0 px-0 py-4 border-bottom">
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <h6 class="fw-bold mb-2">@message.Name</h6>
+                                        <p class="text-muted small mb-1">
+                                            <i class="fas fa-envelope me-2"></i>@message.Email
+                                        </p>
+                                        <p class="mb-2">@message.Message</p>
+                                        <p class="text-muted small mb-0">
+                                            <i class="fas fa-calendar me-2"></i>@message.SubmittedAt.ToString("MM/dd/yyyy HH:mm")
+                                        </p>
+                                    </div>
+                                    <div class="col-md-2 text-end">
+                                        <a href="mailto:@message.Email" class="btn btn-sm btn-outline-pink">
+                                            <i class="fas fa-reply me-1"></i>Reply
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+

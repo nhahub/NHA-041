@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -11,24 +11,26 @@ using System.Threading.Tasks;
 using test.Data;
 using test.Interfaces;
 using test.Models;
-using test.ModelViews;
+using test.ViewModels;
+using test.Services;
 
 namespace test.Controllers
 {
-    [Authorize]
     public class ShelterController : Controller
     {
         private readonly DepiContext _context;
-        private readonly UserManager<IdentityUser> _usermanager;
+        private readonly UserManager<ApplicationUser> _usermanager;
         private readonly IShelter _ShelterRepository;
         private readonly IAnimal _animalRepository;
+        private readonly PhotoServices _photoServices;
 
-        public ShelterController(DepiContext context, UserManager<IdentityUser> userManager, IShelter shelter, IAnimal animalRepository)
+        public ShelterController(DepiContext context, UserManager<ApplicationUser> userManager, IShelter shelter, IAnimal animalRepository, PhotoServices photoServices)
         {
             _usermanager = userManager;
             _context = context;
             _ShelterRepository = shelter;
             _animalRepository = animalRepository;
+            _photoServices = photoServices;
         }
 
         [Authorize(Roles = "Shelter")]
@@ -56,24 +58,38 @@ namespace test.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Roles = "Shelter")]
         public IActionResult Create()
         {
             return View();
         }
 
+        [Authorize(Roles = "Shelter")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateProductViewModel model)
         {
             if (ModelState.IsValid)
             {
                 var userid = _usermanager.GetUserId(User);
-                var product = new Product
+                string? photoUrl = null;
+                
+                if (model.Photo != null)
                 {
-                    Type= model.Type,
+                    var uploadResult = await _photoServices.AddPhotoAsync(model.Photo);
+                    if (uploadResult.Error == null)
+                    {
+                        photoUrl = uploadResult.SecureUrl.ToString();
+                    }
+                }
+                
+                var product = new Product
+                {   Name=model.Name,
+                    Type = model.Type,
                     Disc = model.Disc,
                     Price = model.Price,
                     Userid = userid,
-                    Quantity= model.Quantity
+                    Quantity = model.Quantity,
+                    Photo = photoUrl
                 };
                 await _ShelterRepository.AddProduct(product);
                 return RedirectToAction("Index");
@@ -81,15 +97,21 @@ namespace test.Controllers
             return View(model);
         }
 
+        [AllowAnonymous]
         public async Task<IActionResult> userview()
         {
             var shlters = await _ShelterRepository.GetAllShelters();
+            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
             return View(shlters);
         }
 
+        [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> Shelterpage(IdentityUser shelter)
+        public async Task<IActionResult> Shelterpage(ApplicationUser shelter)
         {
+            // Fetch the full shelter user to get all properties including location
+            var shelterUser = await _usermanager.FindByIdAsync(shelter.Id);
+            
             var products = await _ShelterRepository.GetAllProducts(shelter.Id);
             var animals = await _animalRepository.GetAllUserAnimalsAsync(shelter.Id);
             var userid = _usermanager.GetUserId(User);
@@ -97,16 +119,20 @@ namespace test.Controllers
             ViewBag.ShelterId = shelter.Id;
             ViewBag.email = shelter.Email;
             ViewBag.phonenumber = shelter.PhoneNumber;
-            ViewBag.username = shelter.UserName;
+            ViewBag.username = shelterUser?.FullName ?? shelter.UserName;
+            ViewBag.location = shelterUser?.location;
 
             var viewModel = new ShelterIndexViewModel
             {
                 Products = products,
                 Animals = animals
             };
+            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
 
             return View(viewModel);
         }
+        
+        [Authorize(Roles = "Shelter")]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -121,16 +147,18 @@ namespace test.Controllers
                 ProductId = product.Productid,
                 Type = product.Type,
                 Price = product.Price,
-                Quantity = product.Quantity,
-                Disc = product.Disc
+                Quantity = product.Quantity ,
+                Disc = product.Disc,
+                CurrentPhotoUrl = product.Photo,
+                Name = product.Name
             };
             return View(editModel);
         }
 
+        [Authorize(Roles = "Shelter")]
         [HttpPost]
         public async Task<IActionResult> Edit(EditProductViewModel model)
         {
-           
             if (ModelState.IsValid)
             {
                 var existingProduct = await _ShelterRepository.GetProductbyId(model.ProductId);
@@ -139,17 +167,33 @@ namespace test.Controllers
                     return NotFound();
                 }
 
-                existingProduct.Type = model.Type;
+                // Only update allowed fields (not Type)
                 existingProduct.Price = model.Price;
                 existingProduct.Quantity = model.Quantity;
                 existingProduct.Disc = model.Disc;
+                existingProduct.Name = model.Name;
+
+                // Handle photo upload
+                if (model.Photo != null)
+                {
+                    var uploadResult = await _photoServices.AddPhotoAsync(model.Photo);
+                    if (uploadResult.Error == null)
+                    {
+                        existingProduct.Photo = uploadResult.SecureUrl.ToString();
+                    }
+                }
 
                 await _ShelterRepository.UpdateProduct(existingProduct);
                 return RedirectToAction("Index");
             }
+            
+            // Re-populate CurrentPhotoUrl if validation fails
+            var product = await _ShelterRepository.GetProductbyId(model.ProductId);
+            model.CurrentPhotoUrl = product?.Photo;
             return View(model);
         }
 
+        [Authorize(Roles = "Shelter")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _ShelterRepository.GetProductbyId(id);

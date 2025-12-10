@@ -1,4 +1,4 @@
-﻿@using test.ModelViews
+@using test.ViewModels
 @model CreateProductViewModel
 @{
     ViewData["Title"] = "Add Product";
@@ -10,23 +10,45 @@
             <h1 class="form-title">Add New Product</h1>
             <p class="form-description">Help pet owners find the perfect products</p>
         </div>
-        <form asp-action="Create" method="post" class="animal-form">
+        <form asp-action="Create" method="post" enctype="multipart/form-data" class="animal-form">
+
+            <div class="form-group">
+                <label class="form-label">Product Name</label>
+                <input asp-for="Name" type="text" class="form-input" placeholder="Enter product name" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Product Type</label>
                 <input asp-for="Type" type="text" class="form-input" placeholder="e.g., Food, Toys, Accessories" />
+                <span asp-validation-for="Type" class="text-danger"></span>
             </div>
+
+            <div class="form-group">
+                <label class="form-label">Product Photo</label>
+                <input asp-for="Photo" type="file" class="form-input" accept="image/*" />
+                <small class="text-muted">Upload a photo of your product (optional)</small>
+                <span asp-validation-for="Photo" class="text-danger"></span>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Price</label>
                 <input asp-for="Price" type="number" class="form-input" placeholder="Enter product price" step="0.01" min="0" />
+                <span asp-validation-for="Price" class="text-danger"></span>
             </div>
+
             <div class="form-group">
                 <label class="form-label">Quantity</label>
                 <input asp-for="Quantity" type="number" class="form-input" placeholder="Enter product quantity" step="1" min="0" />
+                <span asp-validation-for="Quantity" class="text-danger"></span>
             </div>
+
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <input asp-for="Disc" type="text" class="form-input" placeholder="Enter product description" />
+                <span asp-validation-for="Disc" class="text-danger"></span>
             </div>
+
             <button type="submit" class="theme-cta">
                 <i class="fas fa-plus"></i>
                 Add Product

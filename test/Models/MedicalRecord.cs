@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,18 +10,18 @@ namespace test.Models;
 public partial class MedicalRecord
 {
     [Key]
-    [Column("recordid")]
+    
     public int Recordid { get; set; }
 
-    [Column("animalid")]
-    public int? Animalid { get; set; }
+   
+    public int Animalid { get; set; }
     [ForeignKey("Animalid")]
     public virtual Animal? Animal { get; set; }
 
-    [Column("injurys")]
-    [StringLength(255)]
-    [Unicode(false)]
-    public string? Injurys { get; set; }
+   
+   
+    [MaxLength(500)]
+    public string? injurys { get; set; }
 
     [Column("status")]
     [StringLength(20)]

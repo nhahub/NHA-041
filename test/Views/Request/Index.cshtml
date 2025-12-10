@@ -1,29 +1,23 @@
-﻿
-
-
-@model List<test.Models.Request>
-@inject UserManager<IdentityUser> userManager
+@model test.ViewModels.RequestIndexViewModel
+@using Microsoft.AspNetCore.Identity
+@using test.Models
+@inject UserManager<ApplicationUser> userManager
 @{
-    var pending = from Request in Model.ToList() where Request.Status == "Pending"&&Request.Useridreq!=ViewBag.userid&&Request.Userid==ViewBag.userid select Request;
-    var approved = from Request in Model.ToList() where Request.Status == "approved" && Request.Useridreq != ViewBag.userid && Request.Userid == ViewBag.userid select Request;
-    var reqgot = from Request in Model.ToList() where Request.Useridreq==ViewBag.userid&&Request.Status=="Pending" select Request;
-    var approvedIncoming = from Request in Model.ToList() where Request.Status == "approved" && Request.Useridreq == ViewBag.userid select Request;
-    var users = ViewBag.users as List<IdentityUser>;
-    var animals = ViewBag.animals as List<test.Models.Animal>;
-    var usersrequested = ViewBag.usersrequested as List<IdentityUser>;
-    ViewData["Title"] = "requests";
-
+    ViewData["Title"] = "Requests";
+    var users = ViewBag.users as List<ApplicationUser>;
+    var animals = ViewBag.animals as List<Animal>;
+    var usersrequested = ViewBag.usersrequested as List<ApplicationUser>;
 }
 
 <div class="container py-5 mt-5 pt-5">
-    <!-- Section: Incoming Requests -->
+    <!-- Section: Incoming Requests (Pending) -->
     <div class="mb-5">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-dark"><i class="fas fa-inbox text-pink me-2"></i>Incoming Requests</h2>
             <p class="text-muted">Requests from others to adopt your animals</p>
         </div>
 
-        @if (reqgot.Count() <= 0)
+        @if (!Model.IncomingPending.Any())
         {
             <div class="text-center py-5 bg-light rounded-3">
                 <div class="mb-3">
@@ -36,24 +30,23 @@
         else
         {
             <div class="row g-4">
-                @foreach(var req in reqgot)
+                @foreach (var req in Model.IncomingPending)
                 {
-                    var animal = animals.FirstOrDefault(a => a.AnimalId == req.AnimalId);
-                    var user = userManager.Users.FirstOrDefault(u => u.Id == req.Useridreq);
-                    var userreq = usersrequested.FirstOrDefault(u => u.Id == req.Userid&&req.Useridreq==user.Id&&req.AnimalId==animal.AnimalId);
-                    
-                    <div class="col-md-6 col-lg-4">
+                    var animal = animals?.FirstOrDefault(a => a.AnimalId == req.AnimalId);
+                    var userreq = usersrequested?.FirstOrDefault(u => u.Id == req.Userid);
+
+                    <div class="col-md-6 col-lg-4 request-card" data-animal-id="@req.AnimalId">
                         <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title fw-bold mb-0">@animal.Name</h5>
+                                    <h5 class="card-title fw-bold mb-0">@animal?.Name</h5>
                                     <span class="badge bg-pink-subtle text-pink rounded-pill">Action Needed</span>
                                 </div>
-                                
+
                                 <div class="mb-4">
                                     <div class="d-flex align-items-center text-muted">
                                         <i class="fas fa-user me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Requested by: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@userreq.Id" class="text-decoration-none text-pink">@userreq.UserName</a></strong></span>
+                                        <span>Requested by: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@userreq?.Id" class="text-decoration-none text-pink">@userreq?.UserName</a></strong></span>
                                     </div>
                                 </div>
 
@@ -88,7 +81,7 @@
             <p class="text-muted">Requests you have approved. Finalize the adoption here.</p>
         </div>
 
-        @if (approvedIncoming.Count() <= 0)
+        @if (!Model.IncomingApproved.Any())
         {
             <div class="text-center py-5 bg-light rounded-3">
                 <div class="mb-3">
@@ -101,29 +94,29 @@
         else
         {
             <div class="row g-4">
-                @foreach(var req in approvedIncoming)
+                @foreach (var req in Model.IncomingApproved)
                 {
-                    var animal = animals.FirstOrDefault(a => a.AnimalId == req.AnimalId);
-                    var userreq = usersrequested.FirstOrDefault(u => u.Id == req.Userid);
-                    
-                    <div class="col-md-6 col-lg-4">
+                    var animal = animals?.FirstOrDefault(a => a.AnimalId == req.AnimalId);
+                    var userreq = usersrequested?.FirstOrDefault(u => u.Id == req.Userid);
+
+                    <div class="col-md-6 col-lg-4 request-card" data-animal-id="@req.AnimalId">
                         <div class="card h-100 border-0 shadow-sm border-start border-5 border-success">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title fw-bold mb-0">@animal.Name</h5>
+                                    <h5 class="card-title fw-bold mb-0">@animal?.Name</h5>
                                     <span class="badge bg-success text-white rounded-pill">Ready for Pickup</span>
                                 </div>
 
                                 <div class="mb-3">
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-user me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Adopter: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@userreq.Id" class="text-decoration-none text-pink">@userreq.UserName</a></strong></span>
+                                        <span>Adopter: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@userreq?.Id" class="text-decoration-none text-pink">@userreq?.UserName</a></strong></span>
                                     </div>
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-envelope me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Email: <a href="mailto:@userreq.Email" class="text-decoration-none text-pink">@userreq.Email</a></span>
+                                        <span>Email: <a href="mailto:@userreq?.Email" class="text-decoration-none text-pink">@userreq?.Email</a></span>
                                     </div>
-                                    @if (!string.IsNullOrEmpty(userreq.PhoneNumber))
+                                    @if (!string.IsNullOrEmpty(userreq?.PhoneNumber))
                                     {
                                         <div class="d-flex align-items-center text-muted">
                                             <i class="fas fa-phone me-2 text-pink" style="width: 20px;"></i>
@@ -131,7 +124,7 @@
                                         </div>
                                     }
                                 </div>
-                                
+
                                 <div class="alert alert-success py-2 px-3 mb-3 small">
                                     <i class="fas fa-check-circle me-1"></i> Adoption approved! Coordinate pickup with the adopter.
                                 </div>
@@ -143,7 +136,8 @@
                                             <i class="fas fa-trash-alt me-1"></i> Remove
                                         </button>
                                     </form>
-                                    <form asp-action="CompleteAdoption" method="post" class="flex-grow-1">
+                                    <form class="complete-adoption-form flex-grow-1">
+                                        @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@req.Reqid" />
                                         <button type="submit" class="btn btn-outline-success w-100 rounded-pill btn-sm fw-bold" title="Finalize adoption and remove animal">
                                             <i class="fas fa-check-double me-1"></i> Complete
@@ -163,14 +157,14 @@
 
     <hr class="my-5 opacity-25">
 
-    <!-- Section: Pending Requests -->
+    <!-- Section: Pending Requests (Outgoing) -->
     <div class="mb-5">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-dark"><i class="fas fa-hourglass-half text-pink me-2"></i>Pending Requests</h2>
             <p class="text-muted">Requests you have sent that are awaiting approval</p>
         </div>
 
-        @if (pending.Count() <= 0)
+        @if (!Model.OutgoingPending.Any())
         {
             <div class="text-center py-5 bg-light rounded-3">
                 <div class="mb-3">
@@ -183,27 +177,27 @@
         else
         {
             <div class="row g-4">
-                @foreach(var req in pending)
+                @foreach (var req in Model.OutgoingPending)
                 {
-                    var animal = animals.FirstOrDefault(a => a.AnimalId == req.AnimalId);
-                    var user = users.FirstOrDefault(u => u.Id == req.Useridreq);
-                    
+                    var animal = animals?.FirstOrDefault(a => a.AnimalId == req.AnimalId);
+                    var user = users?.FirstOrDefault(u => u.Id == req.Useridreq);
+
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title fw-bold mb-0">@animal.Name</h5>
+                                    <h5 class="card-title fw-bold mb-0">@animal?.Name</h5>
                                     <span class="badge bg-secondary text-white rounded-pill">Pending</span>
                                 </div>
 
                                 <div class="mb-0">
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-calendar-alt me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Age: @animal.Age</span>
+                                        <span>Age: @animal?.Age</span>
                                     </div>
                                     <div class="d-flex align-items-center text-muted">
                                         <i class="fas fa-user me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Owner: @user.UserName</span>
+                                        <span>Owner: @user?.UserName</span>
                                     </div>
                                 </div>
 
@@ -225,14 +219,14 @@
 
     <hr class="my-5 opacity-25">
 
-    <!-- Section: Approved Requests -->
+    <!-- Section: Approved Requests (Outgoing) -->
     <div class="mb-5">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-dark"><i class="fas fa-check-circle text-pink me-2"></i>Approved Requests</h2>
             <p class="text-muted">Congratulations! These requests have been approved</p>
         </div>
 
-        @if (approved.Count() <= 0)
+        @if (!Model.OutgoingApproved.Any())
         {
             <div class="text-center py-5 bg-light rounded-3">
                 <div class="mb-3">
@@ -245,33 +239,33 @@
         else
         {
             <div class="row g-4">
-                @foreach(var req in approved)
+                @foreach (var req in Model.OutgoingApproved)
                 {
-                    var animal = animals.FirstOrDefault(a => a.AnimalId == req.AnimalId);
-                    var user = users.FirstOrDefault(u => u.Id == req.Useridreq);
-                    
+                    var animal = animals?.FirstOrDefault(a => a.AnimalId == req.AnimalId);
+                    var user = users?.FirstOrDefault(u => u.Id == req.Useridreq);
+
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm border-start border-5 border-pink">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title fw-bold mb-0">@animal.Name</h5>
+                                    <h5 class="card-title fw-bold mb-0">@animal?.Name</h5>
                                     <span class="badge bg-pink text-white rounded-pill">Approved</span>
                                 </div>
 
                                 <div class="mb-3">
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-calendar-alt me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Age: @animal.Age</span>
+                                        <span>Age: @animal?.Age</span>
                                     </div>
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-envelope me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Email: <a href="mailto:@user.Email" class="text-decoration-none text-pink">@user.Email</a></span>
+                                        <span>Email: <a href="mailto:@user?.Email" class="text-decoration-none text-pink">@user?.Email</a></span>
                                     </div>
                                     <div class="d-flex align-items-center text-muted mb-2">
                                         <i class="fas fa-user me-2 text-pink" style="width: 20px;"></i>
-                                        <span>Owner: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@user.Id" class="text-decoration-none text-pink">@user.UserName</a></strong></span>
+                                        <span>Owner: <strong><a asp-controller="Profile" asp-action="Index" asp-route-userId="@user?.Id" class="text-decoration-none text-pink">@user?.UserName</a></strong></span>
                                     </div>
-                                    @if (!string.IsNullOrEmpty(user.PhoneNumber))
+                                    @if (!string.IsNullOrEmpty(user?.PhoneNumber))
                                     {
                                         <div class="d-flex align-items-center text-muted">
                                             <i class="fas fa-phone me-2 text-pink" style="width: 20px;"></i>
@@ -279,7 +273,7 @@
                                         </div>
                                     }
                                 </div>
-                                
+
                                 <div class="alert alert-pink py-2 px-3 mb-3 small">
                                     <i class="fas fa-info-circle me-1"></i> Please contact the owner to arrange pickup.
                                 </div>
@@ -288,7 +282,7 @@
                                     <form asp-action="Remove" method="post">
                                         <input type="hidden" name="id" value="@req.Reqid" />
                                         <button type="submit" class="btn btn-outline-success w-100 rounded-pill btn-sm fw-bold" title="Mark adoption as complete">
-                                            <i class="fas fa-check-circle me-1"></i> Adoption Complete
+                                            <i class="fas fa-check-circle me-1"></i> Remove Request
                                         </button>
                                     </form>
                                     <a href="@Url.Action("Index", "Chat", new { receiverId = req.Useridreq, animalId = req.AnimalId })" class="btn btn-pink w-100 rounded-pill btn-sm fw-bold mt-2" title="Chat with Owner">
@@ -303,5 +297,3 @@
         }
     </div>
 </div>
-
-

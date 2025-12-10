@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using test.Models;
@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace test.Data;
 
-public partial class DepiContext : IdentityDbContext<IdentityUser>
+public partial class DepiContext : IdentityDbContext<ApplicationUser>
 {
     public DepiContext()
     {
@@ -62,6 +62,17 @@ public partial class DepiContext : IdentityDbContext<IdentityUser>
         modelBuilder.Entity<Product>(entity =>
         {
             entity.HasKey(e => e.Productid).HasName("PK__Products__2D172D323F6C272B");
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+        });
+
+        modelBuilder.Entity<Orders>(entity =>
+        {
+            entity.Property(e => e.TotalPrice).HasColumnType("decimal(18,2)");
+        });
+
+        modelBuilder.Entity<OrderDetails>(entity =>
+        {
+            entity.Property(e => e.TotalPrice).HasColumnType("decimal(18,2)");
         });
 
         modelBuilder.Entity<Request>(entity =>
@@ -77,6 +88,22 @@ public partial class DepiContext : IdentityDbContext<IdentityUser>
             entity.HasOne(d => d.MedicalRecord).WithMany(p => p.VaccinationNeededs)
                 .HasConstraintName("vac_rec_fk")
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+           
+            entity.HasOne(m => m.Sender)
+                  .WithMany()
+                  .HasForeignKey(m => m.SenderId)
+                  .OnDelete(DeleteBehavior.ClientSetNull);
+
+
+            entity.HasOne(m => m.Receiver)
+                  .WithMany()
+                  .HasForeignKey(m => m.ReceiverId)
+                  .OnDelete(DeleteBehavior.ClientSetNull);
         });
     }
 }

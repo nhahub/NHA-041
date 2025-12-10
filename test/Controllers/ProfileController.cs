@@ -2,22 +2,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using test.Interfaces;
-using test.ModelViews;
+using test.Models;
+using test.ViewModels;
+using test.Services;
 
 namespace test.Controllers
 {
     [Authorize]
     public class ProfileController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAnimal _animalRepository;
         private readonly IRequests _requestRepository;
+        private readonly PhotoServices _photoServices;
 
-        public ProfileController(UserManager<IdentityUser> userManager, IAnimal animalRepository, IRequests requestRepository)
+        public ProfileController(UserManager<ApplicationUser> userManager, IAnimal animalRepository, IRequests requestRepository, PhotoServices photoServices)
         {
             _userManager = userManager;
             _animalRepository = animalRepository;
             _requestRepository = requestRepository;
+            _photoServices = photoServices;
         }
 
         public async Task<IActionResult> Index(string? userId)
@@ -25,7 +29,7 @@ namespace test.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return RedirectToAction("Login", "Account");
 
-            IdentityUser targetUser;
+            ApplicationUser targetUser;
             bool isOwner = false;
             bool canViewContactInfo = false;
 
@@ -90,6 +94,69 @@ namespace test.Controllers
             ViewData["IsOwner"] = isOwner;
 
             return PartialView("_AnimalListPartial", animals);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit()
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return RedirectToAction("Login", "Account");
+
+            var viewModel = new EditProfileViewModel
+            {
+                UserName = currentUser.UserName,
+                PhoneNumber = currentUser.PhoneNumber,
+                CurrentPhotoUrl = currentUser.PhotoUrl,
+                FullName = currentUser.FullName,
+                Location = currentUser.location
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(EditProfileViewModel model)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return RedirectToAction("Login", "Account");
+
+            if (!ModelState.IsValid)
+            {
+                model.CurrentPhotoUrl = currentUser.PhotoUrl;
+                return View(model);
+            }
+
+            // Update user fields
+            currentUser.UserName = model.UserName;
+            currentUser.PhoneNumber = model.PhoneNumber;
+            currentUser.FullName = model.FullName;
+            currentUser.location = model.Location;
+
+            // Handle photo upload
+            if (model.Photo != null && model.Photo.Length > 0)
+            {
+                var uploadResult = await _photoServices.AddPhotoAsync(model.Photo);
+                if (uploadResult.Error == null)
+                {
+                    currentUser.PhotoUrl = uploadResult.SecureUrl.ToString();
+                }
+            }
+
+            var result = await _userManager.UpdateAsync(currentUser);
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = "Profile updated successfully!";
+                return RedirectToAction("Index");
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            model.CurrentPhotoUrl = currentUser.PhotoUrl;
+            return View(model);
         }
     }
 }
