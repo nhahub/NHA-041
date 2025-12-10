@@ -115,7 +115,6 @@ namespace test.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EditProfileViewModel model)
         {
             var currentUser = await _userManager.GetUserAsync(User);
